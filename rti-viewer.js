@@ -1,6 +1,6 @@
 // See http://www.html5rocks.com/en/tutorials/file/xhr2/
 
-var uInt8Array;
+var binaryFileBuffer;
 var hshPixels;
 
 function getBinaryFile(path) {
@@ -8,8 +8,7 @@ function getBinaryFile(path) {
   xhr.open('GET', path, true);
   xhr.responseType = 'arraybuffer';
   xhr.onload = function(e) {
-    console.log('making array from response');
-    uInt8Array = new Uint8Array(xhr.response);
+    binaryFileBuffer = xhr.response;
     console.log(xhr);
   }
   xhr.onreadystatechange = function(aEvt) {
@@ -29,7 +28,7 @@ function getBinaryFile(path) {
   }, false);
   xhr.addEventListener("load", function() {
     console.log("The transfer is complete.");
-    console.log(uInt8Array.length);
+    console.log(binaryFileBuffer.length);
     // var hshPixels = loadHSH(uInt8Array);
   }, false);
   xhr.addEventListener("error", function() {

@@ -4,16 +4,17 @@
     <title>GLSL RTI Viewer</title>
     <style>
       #container {
-        background: #000;
         width: 400px;
         height: 400px;
       }
     </style>
   </head>
   <body>
-    <div id="container"></div>
+    <div id="container">
+      <canvas width="400" height="400" />
+    </div>
   </body>
   <script src="js/jquery.min.js"></script>
-  <script src="js/rti-utils.js"></script>
   <script src="rti-viewer.js"></script>
+  <script src="js/rgbtexture.js"></script>
 </html>
