@@ -1,5 +1,5 @@
 (function() {
-  var makeRGBTexture;
+  var drawRGBTexture, drawThreeScene, makeRGBTexture, makeTexture;
 
   makeRGBTexture = function(context, size) {
     var b, base_offset, column, g, imageData, r, row, x, y;
@@ -21,13 +21,65 @@
     return imageData;
   };
 
-  $(function() {
-    var canvas, context, size, textureData;
-    canvas = $('#container > canvas')[0];
+  drawRGBTexture = function() {
+    var canvas, context, size;
+    canvas = $('#rgbtexture > canvas')[0];
     context = canvas.getContext('2d');
-    size = $('#container > canvas').width();
-    textureData = makeRGBTexture(context, size);
-    return context.putImageData(textureData, 0, 0);
+    size = $('#rgbtexture > canvas').width();
+    this.textureData = makeRGBTexture(context, size);
+    return context.putImageData(this.textureData, 0, 0);
+  };
+
+  drawThreeScene = function(container, texture) {
+    var FOV, VIEW_ASPECT_RATIO, animate, camera, cube, light, renderer, scene, zFar, zNear;
+    renderer = new THREE.WebGLRenderer({
+      antialias: true
+    });
+    renderer.setSize(400, 400);
+    container.append(renderer.domElement);
+    renderer.setClearColorHex(0xEEEEEE, 1.0);
+    renderer.clear();
+    FOV = 45;
+    VIEW_ASPECT_RATIO = 400 / 400;
+    zNear = 1;
+    zFar = 10000;
+    camera = new THREE.PerspectiveCamera(FOV, VIEW_ASPECT_RATIO, zNear, zFar);
+    camera.position.z = 300;
+    scene = new THREE.Scene();
+    cube = new THREE.Mesh(new THREE.CubeGeometry(50, 50, 50), new THREE.MeshLambertMaterial({
+      map: texture
+    }));
+    scene.add(cube);
+    scene.add(camera);
+    light = new THREE.PointLight();
+    light.position.set(170, 170, -60);
+    scene.add(light);
+    light = new THREE.PointLight();
+    light.position.set(-170, 170, -60);
+    scene.add(light);
+    light = new THREE.PointLight();
+    light.position.set(0, -170, 100);
+    scene.add(light);
+    animate = function(t) {
+      cube.rotation.x = t / 1000;
+      cube.rotation.y = t / 1600;
+      camera.lookAt(scene.position);
+      renderer.render(scene, camera);
+      return window.webkitRequestAnimationFrame(animate, renderer.domElement);
+    };
+    return animate(new Date().getTime());
+  };
+
+  makeTexture = function() {
+    var texture;
+    texture = new THREE.DataTexture(new Uint8Array(this.textureData.data), 400, 400);
+    texture.needsUpdate = true;
+    return texture;
+  };
+
+  $(function() {
+    drawRGBTexture();
+    return drawThreeScene($('#three'), makeTexture());
   });
 
 }).call(this);

@@ -19,10 +19,59 @@ makeRGBTexture = (context, size) ->
 
   return imageData
 
-$ ->
-  canvas = $('#container > canvas')[0]
+drawRGBTexture = ->
+  canvas = $('#rgbtexture > canvas')[0]
   context = canvas.getContext('2d')
-  size = $('#container > canvas').width()
+  size = $('#rgbtexture > canvas').width()
 
-  textureData = makeRGBTexture(context, size)
-  context.putImageData(textureData, 0, 0)
+  @textureData = makeRGBTexture(context, size)
+  context.putImageData(@textureData, 0, 0)
+
+drawThreeScene = (container, texture) ->
+  renderer = new THREE.WebGLRenderer(antialias: true)
+  renderer.setSize(400, 400)
+  container.append(renderer.domElement)
+  renderer.setClearColorHex(0xEEEEEE, 1.0)
+  renderer.clear()
+  FOV = 45
+  VIEW_ASPECT_RATIO = 400/400
+  zNear = 1
+  zFar = 10000
+  camera = new THREE.PerspectiveCamera(FOV, VIEW_ASPECT_RATIO, zNear, zFar)
+  camera.position.z = 300
+  scene = new THREE.Scene()
+  cube = new THREE.Mesh(new THREE.CubeGeometry(50,50,50),
+                        new THREE.MeshLambertMaterial(map: texture))
+  scene.add(cube)
+  scene.add(camera)
+
+  light = new THREE.PointLight()
+  light.position.set(170,170,-60)
+  scene.add(light)
+
+  light = new THREE.PointLight()
+  light.position.set(-170,170,-60)
+  scene.add(light)
+
+  light = new THREE.PointLight()
+  light.position.set(0,-170,100)
+  scene.add(light)
+
+
+  animate = (t) ->
+    cube.rotation.x = t/1000
+    cube.rotation.y = t/1600
+    camera.lookAt(scene.position)
+    renderer.render(scene, camera)
+    window.webkitRequestAnimationFrame(animate, renderer.domElement)
+
+  animate(new Date().getTime())
+
+makeTexture = ->
+  texture = new THREE.DataTexture(new Uint8Array(@textureData.data), 400, 400)
+  texture.needsUpdate = true
+  return texture
+
+$ ->
+  drawRGBTexture()
+  drawThreeScene($('#three'), makeTexture())
