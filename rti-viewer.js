@@ -1,7 +1,6 @@
 // See http://www.html5rocks.com/en/tutorials/file/xhr2/
 
 var binaryFileBuffer;
-var hshPixels;
 
 function getBinaryFile(path) {
   var xhr = new XMLHttpRequest();
@@ -29,7 +28,7 @@ function getBinaryFile(path) {
   xhr.addEventListener("load", function() {
     console.log("The transfer is complete.");
     console.log(binaryFileBuffer.length);
-    // var hshPixels = loadHSH(uInt8Array);
+    return binaryFileBuffer;
   }, false);
   xhr.addEventListener("error", function() {
     console.log("The transfer failed.");
