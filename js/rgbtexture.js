@@ -65,7 +65,7 @@
       cube.rotation.y = t / 1600;
       camera.lookAt(scene.position);
       renderer.render(scene, camera);
-      return window.webkitRequestAnimationFrame(animate, renderer.domElement);
+      return window.requestAnimationFrame(animate, renderer.domElement);
     };
     return animate(new Date().getTime());
   };

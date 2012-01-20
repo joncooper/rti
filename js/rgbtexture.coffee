@@ -63,7 +63,7 @@ drawThreeScene = (container, texture) ->
     cube.rotation.y = t/1600
     camera.lookAt(scene.position)
     renderer.render(scene, camera)
-    window.webkitRequestAnimationFrame(animate, renderer.domElement)
+    window.requestAnimationFrame(animate, renderer.domElement)
 
   animate(new Date().getTime())
 
