@@ -132,9 +132,84 @@ class RTI
             value = (value * @scale[t]) + @bias[t]
             @hshpixels[@getIndex(@height-1-y, x, b, t)] = value
 
-PI = 3.14159265
+  # Render into an RGBA array and return it
+  # lx, ly, lz are the global light position
+  # // Renders an image under the current lighting position as specified by global variables lx, ly and lz
+  # // The HSHImage float array is passed as input, and an image with (bands) color channels is returned as the output
+
+  renderImageHSH: (context, lx, ly, lz) ->
+    PI = 3.14159265
+
+    { atan2, acos, sqrt, cos, sin, pow, min, max } = Math
+
+    # Compute weights based on the lighting direction
+    weights = new Float64Array(30)
+    phi = atan2(ly, lx)
+    phi = phi + (2 * PI) if phi < 0
+    theta = acos(lz)
+
+    weights[0]  = 1/sqrt(2*PI)
+    weights[1]  = sqrt(6/PI)      * (cos(phi)*sqrt(cos(theta)-cos(theta)*cos(theta)))
+    weights[2]  = sqrt(3/(2*PI))  * (-1 + 2*cos(theta))
+    weights[3]  = sqrt(6/PI)      * (sqrt(cos(theta) - cos(theta)*cos(theta))*sin(phi))
+
+    weights[4]  = sqrt(30/PI)     * (cos(2*phi)*(-cos(theta) + cos(theta)*cos(theta)))
+    weights[5]  = sqrt(30/PI)     * (cos(phi)*(-1 + 2*cos(theta))*sqrt(cos(theta) - cos(theta)*cos(theta)))
+    weights[6]  = sqrt(5/(2*PI))  * (1 - 6*cos(theta) + 6*cos(theta)*cos(theta))
+    weights[7]  = sqrt(30/PI)     * ((-1 + 2*cos(theta))*sqrt(cos(theta) - cos(theta)*cos(theta))*sin(phi))
+    weights[8]  = sqrt(30/PI)     * ((-cos(theta) + cos(theta)*cos(theta))*sin(2*phi))
+
+    weights[9]  = 2*sqrt(35/PI)   * cos(3*phi)*pow(cos(theta) - cos(theta)*cos(theta),(3/2))
+    weights[10] = (sqrt(210/PI)   * cos(2*phi)*(-1 + 2*cos(theta))*(-cos(theta) + cos(theta)*cos(theta)))
+    weights[11] = 2*sqrt(21/PI)   * cos(phi)*sqrt(cos(theta) - cos(theta)*cos(theta))*(1 - 5*cos(theta) + 5*cos(theta)*cos(theta))
+    weights[12] = sqrt(7/(2*PI))  * (-1 + 12*cos(theta) - 30*cos(theta)*cos(theta) + 20*cos(theta)*cos(theta)*cos(theta))
+    weights[13] = 2*sqrt(21/PI)   * sqrt(cos(theta) - cos(theta)*cos(theta))*(1 - 5*cos(theta) + 5*cos(theta)*cos(theta))*sin(phi)
+    weights[14] = (sqrt(210/PI)   * (-1 + 2*cos(theta))*(-cos(theta) + cos(theta)*cos(theta))*sin(2*phi))
+    weights[15] = 2*sqrt(35/PI)   * pow(cos(theta) - cos(theta)*cos(theta),(3/2))*sin(3*phi)
+
+    console.log "Rendering:    #{@width} x #{@height}"
+    console.log "(lx, ly, lz): (#{lx}, #{ly}, #{lz})"
+    console.log "Context:      #{context}"
+
+    context.clearRect(0, 0, @width, @height)
+    imagePixelData = context.createImageData(@width, @height)
+    outputBands = 4 # we are going to emit RGBA, not RGB
+
+    for j in [0...@height]
+      for i in [0...@width]
+        # The computation for a single pixel
+        for b in [0...@bands]
+          # The computation for a single color channel on a single pixel
+          value = 0.0
+          # Multiply and sum the coefficients with the weights.
+          # This evaluates the polynomial function we use for lighting
+          for q in [0...(@order * @order)]
+            value += (@hshpixels[@getIndex(j,i,b,q)] * weights[q])
+          value = min(value, 1.0)
+          value = max(value, 0.0)
+          # Set the computed pixel color for that pixel, color channel
+          imagePixelData.data[j*@width*outputBands+i*outputBands+b] = value * 255
+        # Set the alpha channel
+        imagePixelData.data[(j*@width*outputBands) + (i*outputBands) + 3] = 255
+
+    window.imagePixelData = imagePixelData
+    context.putImageData(imagePixelData, 0, 0)
+
+window.go = ->
+  canvas = $('#rgbtexture > canvas')[0]
+  window.drawContext = canvas.getContext('2d')
+
+  console.log "Parsing RTI file..."
+  rti.parseHSH()
+  console.log "Parsed."
+
+  canvas.width = rti.width
+  canvas.height = rti.height
+
+window.draw = ( x, y, z) ->
+  rti.renderImageHSH(window.drawContext, x, y, z)
 
 $ ->
-  rti = new RTI('rti/cuniform.rti')
+  rti = new RTI('rti/coin.rti')
   window.rti = rti
   window.assertEqual = assertEqual
