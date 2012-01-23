@@ -44,7 +44,6 @@ DataView::readFloat = ->
   return ret
 
 DataView::readUint8 = ->
-  console.log @pos if @pos > (@byteLength - 10)
   ret = @getUint8(@pos)
   @pos = @pos + 1
   return ret
@@ -103,7 +102,6 @@ class RTI
     @basis_type    = Number header_line_3[1]
     @element_size  = Number header_line_3[2]
 
-    console.log "File type:    #{@file_type}"
     console.log "Dimensions:   #{@width} x #{@height}"
     console.log "Bands:        #{@bands}"
     console.log "Terms:        #{@terms}"
@@ -123,12 +121,9 @@ class RTI
     @bias  = new Float32Array(@terms)
     @bias[i] = @dataStream.readFloat() for i in [0...@terms]
 
-    console.log @scale, @bias
-
     # Read the main data block
     @tmpuc = new Uint8Array(@terms)
     for y in [0...@height]
-      console.log "Reading #{y}"
       for x in [0...@width]
         for b in [0...@bands]
           @tmpuc[i] = @dataStream.readUint8() for i in [0...@terms]
