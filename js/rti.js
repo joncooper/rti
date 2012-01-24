@@ -248,7 +248,7 @@
       r = Math.min(Math.sqrt(x * x + y * y), min_axis) / min_axis;
       lx = r * Math.cos(theta);
       ly = r * Math.sin(theta);
-      lz = 1.0 - Math.sqrt(lx * lx + ly * ly);
+      lz = Math.sqrt(1.0 * 1.0 - (lx * lx) - (ly * ly));
       console.log("theta, r, lx, ly", theta, r, lx, ly);
       return window.draw(lx, ly, lz);
     };
