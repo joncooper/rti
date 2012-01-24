@@ -78,7 +78,8 @@
   };
 
   $(function() {
-    return drawRGBTexture();
+    drawRGBTexture();
+    return drawThreeScene($('#three'), makeTexture());
   });
 
 }).call(this);
