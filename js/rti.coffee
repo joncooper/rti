@@ -51,6 +51,8 @@ DataView::readUint8 = ->
 assertEqual = (tested, expected, errorMessage) ->
   throw "Failed assertion: #{errorMessage}" if tested isnt expected
 
+PI = 3.14159265
+
 class RTI
   constructor: (@url) ->
     @loadFile()
@@ -130,7 +132,9 @@ class RTI
           for t in [0...@terms]
             value = @tmpuc[t] / 255
             value = (value * @scale[t]) + @bias[t]
-            @hshpixels[@getIndex(@height-1-y, x, b, t)] = value
+            # OpenGL ordering (i.e. flip-Y)
+            # @hshpixels[@getIndex(@height-1-y, x, b, t)] = value
+            @hshpixels[@getIndex(y, x, b, t)] = value
 
   # Render into an RGBA array and return it
   # lx, ly, lz are the global light position
@@ -138,7 +142,6 @@ class RTI
   # // The HSHImage float array is passed as input, and an image with (bands) color channels is returned as the output
 
   renderImageHSH: (context, lx, ly, lz) ->
-    PI = 3.14159265
 
     { atan2, acos, sqrt, cos, sin, pow, min, max } = Math
 
@@ -205,6 +208,39 @@ window.go = ->
 
   canvas.width = rti.width
   canvas.height = rti.height
+
+  clickHandler = (event) =>
+    canvasOffset = $(canvas).offset()
+    x = event.clientX + Math.floor(canvasOffset.left)
+    y = event.clientY + Math.floor(canvasOffset.top) + 1
+
+    x -= canvas.width / 2
+    y *= -1
+    y += canvas.height / 2
+
+    # TODO: this is slightly wrong
+    console.log "clicked at", x, y
+
+    min_axis = Math.min(canvas.width, canvas.height) / 2
+    console.log "min_axis", min_axis
+
+    theta = Math.atan2(y, x)
+    r     = Math.min(Math.sqrt(x*x + y*y), min_axis) / min_axis # Clamp to radius of circle = min_axis
+    lx    = r * Math.cos(theta)
+    ly    = r * Math.sin(theta)
+    lz    = 1.0 - Math.sqrt(lx*lx + ly*ly)
+
+    console.log "theta, r, lx, ly", theta, r, lx, ly
+    window.draw(lx, ly, lz)
+
+  $('#rgbtexture > canvas').click(clickHandler)
+
+window.drawS = (theta, phi) ->
+  x = Math.cos(theta) * Math.sin(phi)
+  y = Math.sin(theta) * Math.sin(phi)
+  z = Math.cos(phi)
+  console.log "Drawing: (#{x}, #{y}, #{z})"
+  window.draw(x, y, z)
 
 window.draw = ( x, y, z) ->
   rti.renderImageHSH(window.drawContext, x, y, z)

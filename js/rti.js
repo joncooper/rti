@@ -1,5 +1,5 @@
 (function() {
-  var RTI, assertEqual;
+  var PI, RTI, assertEqual;
   var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
   DataView.prototype.pos = 0;
@@ -74,6 +74,8 @@
   assertEqual = function(tested, expected, errorMessage) {
     if (tested !== expected) throw "Failed assertion: " + errorMessage;
   };
+
+  PI = 3.14159265;
 
   RTI = (function() {
 
@@ -156,7 +158,7 @@
                   for (t = 0, _ref7 = this.terms; 0 <= _ref7 ? t < _ref7 : t > _ref7; 0 <= _ref7 ? t++ : t--) {
                     value = this.tmpuc[t] / 255;
                     value = (value * this.scale[t]) + this.bias[t];
-                    _results4.push(this.hshpixels[this.getIndex(this.height - 1 - y, x, b, t)] = value);
+                    _results4.push(this.hshpixels[this.getIndex(y, x, b, t)] = value);
                   }
                   return _results4;
                 }).call(this));
@@ -171,8 +173,7 @@
     };
 
     RTI.prototype.renderImageHSH = function(context, lx, ly, lz) {
-      var PI, acos, atan2, b, cos, i, imagePixelData, j, max, min, outputBands, phi, pow, q, sin, sqrt, theta, value, weights, _ref, _ref2, _ref3, _ref4;
-      PI = 3.14159265;
+      var acos, atan2, b, cos, i, imagePixelData, j, max, min, outputBands, phi, pow, q, sin, sqrt, theta, value, weights, _ref, _ref2, _ref3, _ref4;
       atan2 = Math.atan2, acos = Math.acos, sqrt = Math.sqrt, cos = Math.cos, sin = Math.sin, pow = Math.pow, min = Math.min, max = Math.max;
       weights = new Float64Array(30);
       phi = atan2(ly, lx);
@@ -223,14 +224,44 @@
   })();
 
   window.go = function() {
-    var canvas;
+    var canvas, clickHandler;
+    var _this = this;
     canvas = $('#rgbtexture > canvas')[0];
     window.drawContext = canvas.getContext('2d');
     console.log("Parsing RTI file...");
     rti.parseHSH();
     console.log("Parsed.");
     canvas.width = rti.width;
-    return canvas.height = rti.height;
+    canvas.height = rti.height;
+    clickHandler = function(event) {
+      var canvasOffset, lx, ly, lz, min_axis, r, theta, x, y;
+      canvasOffset = $(canvas).offset();
+      x = event.clientX + Math.floor(canvasOffset.left);
+      y = event.clientY + Math.floor(canvasOffset.top) + 1;
+      x -= canvas.width / 2;
+      y *= -1;
+      y += canvas.height / 2;
+      console.log("clicked at", x, y);
+      min_axis = Math.min(canvas.width, canvas.height) / 2;
+      console.log("min_axis", min_axis);
+      theta = Math.atan2(y, x);
+      r = Math.min(Math.sqrt(x * x + y * y), min_axis) / min_axis;
+      lx = r * Math.cos(theta);
+      ly = r * Math.sin(theta);
+      lz = 1.0 - Math.sqrt(lx * lx + ly * ly);
+      console.log("theta, r, lx, ly", theta, r, lx, ly);
+      return window.draw(lx, ly, lz);
+    };
+    return $('#rgbtexture > canvas').click(clickHandler);
+  };
+
+  window.drawS = function(theta, phi) {
+    var x, y, z;
+    x = Math.cos(theta) * Math.sin(phi);
+    y = Math.sin(theta) * Math.sin(phi);
+    z = Math.cos(phi);
+    console.log("Drawing: (" + x + ", " + y + ", " + z + ")");
+    return window.draw(x, y, z);
   };
 
   window.draw = function(x, y, z) {
