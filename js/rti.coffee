@@ -246,7 +246,9 @@ window.go = ->
     console.log "theta, r, lx, ly", theta, r, lx, ly
     window.draw(lx, ly, lz)
 
-  $('#rgbtexture > canvas').click(clickHandler)
+  $('#rgbtexture > canvas').mousemove(clickHandler)
+  # 
+  # $('#rgbtexture > canvas').click(clickHandler)
 
 window.drawS = (theta, phi) ->
   x = Math.cos(theta) * Math.sin(phi)

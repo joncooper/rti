@@ -271,7 +271,7 @@
       console.log("theta, r, lx, ly", theta, r, lx, ly);
       return window.draw(lx, ly, lz);
     };
-    return $('#rgbtexture > canvas').click(clickHandler);
+    return $('#rgbtexture > canvas').mousemove(clickHandler);
   };
 
   window.drawS = function(theta, phi) {
