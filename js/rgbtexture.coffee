@@ -74,4 +74,4 @@ makeTexture = ->
 
 $ ->
   drawRGBTexture()
-  drawThreeScene($('#three'), makeTexture())
+  # drawThreeScene($('#three'), makeTexture())
