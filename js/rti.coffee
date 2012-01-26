@@ -113,7 +113,7 @@ class RTI
     assertEqual(@file_type, 3, "Cannot parse non-HSH file type #{@file_type}")
 
     @order = Math.sqrt(@terms)
-    @hshpixels = new Float32Array(@width * @height * @bands * @order * @order)
+    @coefficients = new Uint8Array(@width * @height * @bands * @terms)
 
     # Read the scale values
     @scale = new Float32Array(@terms)
@@ -124,17 +124,13 @@ class RTI
     @bias[i] = @dataStream.readFloat() for i in [0...@terms]
 
     # Read the main data block
-    @tmpuc = new Uint8Array(@terms)
     for y in [0...@height]
       for x in [0...@width]
         for b in [0...@bands]
-          @tmpuc[i] = @dataStream.readUint8() for i in [0...@terms]
           for t in [0...@terms]
-            value = @tmpuc[t] / 255
-            value = (value * @scale[t]) + @bias[t]
+            @coefficients[@getIndex(y, x, b, t)] = @dataStream.readUint8()
             # OpenGL ordering (i.e. flip-Y)
             # @hshpixels[@getIndex(@height-1-y, x, b, t)] = value
-            @hshpixels[@getIndex(y, x, b, t)] = value
 
   # Render into an RGBA array and return it
   # lx, ly, lz are the global light position
@@ -178,6 +174,9 @@ class RTI
     imagePixelData = context.createImageData(@width, @height)
     outputBands = 4 # we are going to emit RGBA, not RGB
 
+    clamp = (value) ->
+      max(min(value, 1.0), 0.0)
+
     for j in [0...@height]
       for i in [0...@width]
         # The computation for a single pixel
@@ -186,10 +185,9 @@ class RTI
           value = 0.0
           # Multiply and sum the coefficients with the weights.
           # This evaluates the polynomial function we use for lighting
-          for q in [0...(@order * @order)]
-            value += (@hshpixels[@getIndex(j,i,b,q)] * weights[q])
-          value = min(value, 1.0)
-          value = max(value, 0.0)
+          for t in [0...(@terms)]
+            value += ((@coefficients[@getIndex(j,i,b,t)] / 255) * @scale[t] + @bias[t]) * weights[t]
+          value = clamp(value)
           # Set the computed pixel color for that pixel, color channel
           imagePixelData.data[j*@width*outputBands+i*outputBands+b] = value * 255
         # Set the alpha channel
@@ -261,6 +259,6 @@ window.draw = ( x, y, z) ->
   rti.renderImageHSH(window.drawContext, x, y, z)
 
 $ ->
-  rti = new RTI('rti/coin.rti')
+  rti = new RTI('rti/vase.rti')
   window.rti = rti
   window.assertEqual = assertEqual

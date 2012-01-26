@@ -109,7 +109,7 @@
     };
 
     RTI.prototype.parseHSH = function() {
-      var b, header_line_2, header_line_3, i, t, value, x, y, _ref, _ref2, _ref3, _results;
+      var b, header_line_2, header_line_3, i, t, x, y, _ref, _ref2, _ref3, _results;
       while (this.dataStream.peekLine()[0] === '#') {
         this.dataStream.readLine();
       }
@@ -129,7 +129,7 @@
       console.log("Element Size: " + this.element_size);
       assertEqual(this.file_type, 3, "Cannot parse non-HSH file type " + this.file_type);
       this.order = Math.sqrt(this.terms);
-      this.hshpixels = new Float32Array(this.width * this.height * this.bands * this.order * this.order);
+      this.coefficients = new Uint8Array(this.width * this.height * this.bands * this.terms);
       this.scale = new Float32Array(this.terms);
       for (i = 0, _ref = this.terms; 0 <= _ref ? i < _ref : i > _ref; 0 <= _ref ? i++ : i--) {
         this.scale[i] = this.dataStream.readFloat();
@@ -138,7 +138,6 @@
       for (i = 0, _ref2 = this.terms; 0 <= _ref2 ? i < _ref2 : i > _ref2; 0 <= _ref2 ? i++ : i--) {
         this.bias[i] = this.dataStream.readFloat();
       }
-      this.tmpuc = new Uint8Array(this.terms);
       _results = [];
       for (y = 0, _ref3 = this.height; 0 <= _ref3 ? y < _ref3 : y > _ref3; 0 <= _ref3 ? y++ : y--) {
         _results.push((function() {
@@ -146,19 +145,14 @@
           _results2 = [];
           for (x = 0, _ref4 = this.width; 0 <= _ref4 ? x < _ref4 : x > _ref4; 0 <= _ref4 ? x++ : x--) {
             _results2.push((function() {
-              var _ref5, _ref6, _results3;
+              var _ref5, _results3;
               _results3 = [];
               for (b = 0, _ref5 = this.bands; 0 <= _ref5 ? b < _ref5 : b > _ref5; 0 <= _ref5 ? b++ : b--) {
-                for (i = 0, _ref6 = this.terms; 0 <= _ref6 ? i < _ref6 : i > _ref6; 0 <= _ref6 ? i++ : i--) {
-                  this.tmpuc[i] = this.dataStream.readUint8();
-                }
                 _results3.push((function() {
-                  var _ref7, _results4;
+                  var _ref6, _results4;
                   _results4 = [];
-                  for (t = 0, _ref7 = this.terms; 0 <= _ref7 ? t < _ref7 : t > _ref7; 0 <= _ref7 ? t++ : t--) {
-                    value = this.tmpuc[t] / 255;
-                    value = (value * this.scale[t]) + this.bias[t];
-                    _results4.push(this.hshpixels[this.getIndex(y, x, b, t)] = value);
+                  for (t = 0, _ref6 = this.terms; 0 <= _ref6 ? t < _ref6 : t > _ref6; 0 <= _ref6 ? t++ : t--) {
+                    _results4.push(this.coefficients[this.getIndex(y, x, b, t)] = this.dataStream.readUint8());
                   }
                   return _results4;
                 }).call(this));
@@ -173,7 +167,7 @@
     };
 
     RTI.prototype.renderImageHSH = function(context, lx, ly, lz) {
-      var acos, atan2, b, cos, i, imagePixelData, j, max, min, outputBands, phi, pow, q, sin, sqrt, theta, value, weights, _ref, _ref2, _ref3, _ref4;
+      var acos, atan2, b, clamp, cos, i, imagePixelData, j, max, min, outputBands, phi, pow, sin, sqrt, t, theta, value, weights, _ref, _ref2, _ref3, _ref4;
       atan2 = Math.atan2, acos = Math.acos, sqrt = Math.sqrt, cos = Math.cos, sin = Math.sin, pow = Math.pow, min = Math.min, max = Math.max;
       weights = new Float64Array(30);
       phi = atan2(ly, lx);
@@ -201,15 +195,17 @@
       context.clearRect(0, 0, this.width, this.height);
       imagePixelData = context.createImageData(this.width, this.height);
       outputBands = 4;
+      clamp = function(value) {
+        return max(min(value, 1.0), 0.0);
+      };
       for (j = 0, _ref = this.height; 0 <= _ref ? j < _ref : j > _ref; 0 <= _ref ? j++ : j--) {
         for (i = 0, _ref2 = this.width; 0 <= _ref2 ? i < _ref2 : i > _ref2; 0 <= _ref2 ? i++ : i--) {
           for (b = 0, _ref3 = this.bands; 0 <= _ref3 ? b < _ref3 : b > _ref3; 0 <= _ref3 ? b++ : b--) {
             value = 0.0;
-            for (q = 0, _ref4 = this.order * this.order; 0 <= _ref4 ? q < _ref4 : q > _ref4; 0 <= _ref4 ? q++ : q--) {
-              value += this.hshpixels[this.getIndex(j, i, b, q)] * weights[q];
+            for (t = 0, _ref4 = this.terms; 0 <= _ref4 ? t < _ref4 : t > _ref4; 0 <= _ref4 ? t++ : t--) {
+              value += ((this.coefficients[this.getIndex(j, i, b, t)] / 255) * this.scale[t] + this.bias[t]) * weights[t];
             }
-            value = min(value, 1.0);
-            value = max(value, 0.0);
+            value = clamp(value);
             imagePixelData.data[j * this.width * outputBands + i * outputBands + b] = value * 255;
           }
           imagePixelData.data[(j * this.width * outputBands) + (i * outputBands) + 3] = 255;
@@ -289,7 +285,7 @@
 
   $(function() {
     var rti;
-    rti = new RTI('rti/coin.rti');
+    rti = new RTI('rti/vase.rti');
     window.rti = rti;
     return window.assertEqual = assertEqual;
   });
