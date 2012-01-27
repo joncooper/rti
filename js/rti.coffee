@@ -51,9 +51,11 @@ DataView::readUint8 = ->
 assertEqual = (tested, expected, errorMessage) ->
   throw "Failed assertion: #{errorMessage}" if tested isnt expected
 
-PI = 3.14159265
-
 class RTI
+
+  PI = 3.14159265
+  { atan2, acos, sqrt, cos, sin, pow, min, max } = Math
+
   constructor: (@url) ->
     @loadFile()
 
@@ -137,15 +139,26 @@ class RTI
   # // Renders an image under the current lighting position as specified by global variables lx, ly and lz
   # // The HSHImage float array is passed as input, and an image with (bands) color channels is returned as the output
 
-  renderImageHSH: (context, lx, ly, lz) ->
+  sphericalToCartesian: (r, theta, phi) ->
+    {
+      x: r * cos(phi) * sin(theta)
+      y: r * sin(phi) * sin(theta)
+      z: r * cos(theta)
+    }
 
-    { atan2, acos, sqrt, cos, sin, pow, min, max } = Math
+  cartesianToSpherical: (x, y, z) ->
+    {
+      r:     sqrt(x*x + y*y + z*z)
+      theta: acos(z)
+      phi:   atan2(y, x)
+    }
 
-    # Compute weights based on the lighting direction
-    weights = new Float64Array(30)
-    phi = atan2(ly, lx)
+  # Compute weights based on the lighting direction
+  computeWeights: (theta, phi) ->
+
+    weights = new Float64Array(16)
+
     phi = phi + (2 * PI) if phi < 0
-    theta = acos(lz)
 
     weights[0]  = 1/sqrt(2*PI)
     weights[1]  = sqrt(6/PI)      * (cos(phi)*sqrt(cos(theta)-cos(theta)*cos(theta)))
@@ -165,6 +178,14 @@ class RTI
     weights[13] = 2*sqrt(21/PI)   * sqrt(cos(theta) - cos(theta)*cos(theta))*(1 - 5*cos(theta) + 5*cos(theta)*cos(theta))*sin(phi)
     weights[14] = (sqrt(210/PI)   * (-1 + 2*cos(theta))*(-cos(theta) + cos(theta)*cos(theta))*sin(2*phi))
     weights[15] = 2*sqrt(35/PI)   * pow(cos(theta) - cos(theta)*cos(theta),(3/2))*sin(3*phi)
+
+    return weights
+
+
+  renderImageHSH: (context, lx, ly, lz) ->
+
+    sCoord = @cartesianToSpherical(lx, ly, lz)
+    weights = @computeWeights(sCoord.theta, sCoord.phi)
 
     console.log "Rendering:    #{@width} x #{@height}"
     console.log "(lx, ly, lz): (#{lx}, #{ly}, #{lz})"
@@ -220,7 +241,7 @@ window.go = ->
   canvas.width = rti.width
   canvas.height = rti.height
 
-  clickHandler = (event) =>
+  moveHandler = (event) =>
     canvasOffset = $(canvas).offset()
     x = event.clientX + Math.floor(canvasOffset.left)
     y = event.clientY + Math.floor(canvasOffset.top) + 1
@@ -244,9 +265,7 @@ window.go = ->
     console.log "theta, r, lx, ly", theta, r, lx, ly
     window.draw(lx, ly, lz)
 
-  $('#rgbtexture > canvas').mousemove(clickHandler)
-  # 
-  # $('#rgbtexture > canvas').click(clickHandler)
+  $('#rgbtexture > canvas').mousemove(moveHandler)
 
 window.drawS = (theta, phi) ->
   x = Math.cos(theta) * Math.sin(phi)
@@ -259,6 +278,6 @@ window.draw = ( x, y, z) ->
   rti.renderImageHSH(window.drawContext, x, y, z)
 
 $ ->
-  rti = new RTI('rti/vase.rti')
+  rti = new RTI('rti/coin.rti')
   window.rti = rti
   window.assertEqual = assertEqual

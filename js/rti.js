@@ -1,5 +1,5 @@
 (function() {
-  var PI, RTI, assertEqual;
+  var RTI, assertEqual;
   var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
   DataView.prototype.pos = 0;
@@ -75,9 +75,12 @@
     if (tested !== expected) throw "Failed assertion: " + errorMessage;
   };
 
-  PI = 3.14159265;
-
   RTI = (function() {
+    var PI, acos, atan2, cos, max, min, pow, sin, sqrt;
+
+    PI = 3.14159265;
+
+    atan2 = Math.atan2, acos = Math.acos, sqrt = Math.sqrt, cos = Math.cos, sin = Math.sin, pow = Math.pow, min = Math.min, max = Math.max;
 
     function RTI(url) {
       this.url = url;
@@ -166,13 +169,26 @@
       return _results;
     };
 
-    RTI.prototype.renderImageHSH = function(context, lx, ly, lz) {
-      var acos, atan2, b, clamp, cos, i, imagePixelData, j, max, min, outputBands, phi, pow, sin, sqrt, t, theta, value, weights, _ref, _ref2, _ref3, _ref4;
-      atan2 = Math.atan2, acos = Math.acos, sqrt = Math.sqrt, cos = Math.cos, sin = Math.sin, pow = Math.pow, min = Math.min, max = Math.max;
-      weights = new Float64Array(30);
-      phi = atan2(ly, lx);
+    RTI.prototype.sphericalToCartesian = function(r, theta, phi) {
+      return {
+        x: r * cos(phi) * sin(theta),
+        y: r * sin(phi) * sin(theta),
+        z: r * cos(theta)
+      };
+    };
+
+    RTI.prototype.cartesianToSpherical = function(x, y, z) {
+      return {
+        r: sqrt(x * x + y * y + z * z),
+        theta: acos(z),
+        phi: atan2(y, x)
+      };
+    };
+
+    RTI.prototype.computeWeights = function(theta, phi) {
+      var weights;
+      weights = new Float64Array(16);
       if (phi < 0) phi = phi + (2 * PI);
-      theta = acos(lz);
       weights[0] = 1 / sqrt(2 * PI);
       weights[1] = sqrt(6 / PI) * (cos(phi) * sqrt(cos(theta) - cos(theta) * cos(theta)));
       weights[2] = sqrt(3 / (2 * PI)) * (-1 + 2 * cos(theta));
@@ -189,6 +205,13 @@
       weights[13] = 2 * sqrt(21 / PI) * sqrt(cos(theta) - cos(theta) * cos(theta)) * (1 - 5 * cos(theta) + 5 * cos(theta) * cos(theta)) * sin(phi);
       weights[14] = sqrt(210 / PI) * (-1 + 2 * cos(theta)) * (-cos(theta) + cos(theta) * cos(theta)) * sin(2 * phi);
       weights[15] = 2 * sqrt(35 / PI) * pow(cos(theta) - cos(theta) * cos(theta), 3 / 2) * sin(3 * phi);
+      return weights;
+    };
+
+    RTI.prototype.renderImageHSH = function(context, lx, ly, lz) {
+      var b, clamp, i, imagePixelData, j, outputBands, sCoord, t, value, weights, _ref, _ref2, _ref3, _ref4;
+      sCoord = this.cartesianToSpherical(lx, ly, lz);
+      weights = this.computeWeights(sCoord.theta, sCoord.phi);
       console.log("Rendering:    " + this.width + " x " + this.height);
       console.log("(lx, ly, lz): (" + lx + ", " + ly + ", " + lz + ")");
       console.log("Context:      " + context);
@@ -239,7 +262,7 @@
   })();
 
   window.go = function() {
-    var canvas, clickHandler;
+    var canvas, moveHandler;
     var _this = this;
     canvas = $('#rgbtexture > canvas')[0];
     window.drawContext = canvas.getContext('2d');
@@ -248,7 +271,7 @@
     console.log("Parsed.");
     canvas.width = rti.width;
     canvas.height = rti.height;
-    clickHandler = function(event) {
+    moveHandler = function(event) {
       var canvasOffset, lx, ly, lz, min_axis, r, theta, x, y;
       canvasOffset = $(canvas).offset();
       x = event.clientX + Math.floor(canvasOffset.left);
@@ -267,7 +290,7 @@
       console.log("theta, r, lx, ly", theta, r, lx, ly);
       return window.draw(lx, ly, lz);
     };
-    return $('#rgbtexture > canvas').mousemove(clickHandler);
+    return $('#rgbtexture > canvas').mousemove(moveHandler);
   };
 
   window.drawS = function(theta, phi) {
@@ -285,7 +308,7 @@
 
   $(function() {
     var rti;
-    rti = new RTI('rti/vase.rti');
+    rti = new RTI('rti/coin.rti');
     window.rti = rti;
     return window.assertEqual = assertEqual;
   });
