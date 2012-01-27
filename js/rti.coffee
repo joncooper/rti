@@ -220,12 +220,12 @@ class RTI
   makeTextures: ->
     textures = {}
     for term in [0...@terms]
-      textureData = new Float32Array(@width * @height * @bands)
+      textureData = new Uint8Array(@width * @height * @bands)
       i = 0
       for y in [0...@height]
         for x in [0...@width]
           for channel in [0...@bands]
-            textureData[i] = @hshpixels[@getIndex(y,x,channel,term)]
+            textureData[i] = @coefficients[@getIndex(y,x,channel,term)]
             i += 1
       textures[term] = textureData
     return textures

@@ -242,12 +242,12 @@
       var channel, i, term, textureData, textures, x, y, _ref, _ref2, _ref3, _ref4;
       textures = {};
       for (term = 0, _ref = this.terms; 0 <= _ref ? term < _ref : term > _ref; 0 <= _ref ? term++ : term--) {
-        textureData = new Float32Array(this.width * this.height * this.bands);
+        textureData = new Uint8Array(this.width * this.height * this.bands);
         i = 0;
         for (y = 0, _ref2 = this.height; 0 <= _ref2 ? y < _ref2 : y > _ref2; 0 <= _ref2 ? y++ : y--) {
           for (x = 0, _ref3 = this.width; 0 <= _ref3 ? x < _ref3 : x > _ref3; 0 <= _ref3 ? x++ : x--) {
             for (channel = 0, _ref4 = this.bands; 0 <= _ref4 ? channel < _ref4 : channel > _ref4; 0 <= _ref4 ? channel++ : channel--) {
-              textureData[i] = this.hshpixels[this.getIndex(y, x, channel, term)];
+              textureData[i] = this.coefficients[this.getIndex(y, x, channel, term)];
               i += 1;
             }
           }
