@@ -1,5 +1,9 @@
 PI = 3.141592653589793
 
+# TODO: clean up
+# TODO: click and drag to move
+# TODO: mouse wheel to zoom
+
 vertexShader = """
 
 varying vec2 pos;
