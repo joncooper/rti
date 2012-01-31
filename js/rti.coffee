@@ -1,53 +1,3 @@
-DataView::pos = 0
-
-DataView::stringFromUint8Slice = (startOffset, endOffset) ->
-  getCharStr = (i) =>
-    String.fromCharCode(@getUint8(i))
-  (getCharStr(i) for i in [startOffset...endOffset]).join('')
-
-DataView::mark = ->
-  @markedPos = @pos
-
-DataView::reset = ->
-  @pos = @markedPos
-
-DataView::peekLine = ->
-  @mark()
-  line = @readLine()
-  @reset()
-  return line
-
-# Lines end with either LF (0x0a) or CRLF (0x0d0a).
-DataView::readLine = ->
-  if @pos >= @byteLength
-    return null
-
-  start = @pos
-  end   = -1
-
-  while (@pos < @byteLength) && (end < start)
-    if @getUint8(@pos) is 0x0a
-      if (@pos > 0) && (@getUint8(@pos-1) is 0x0d)
-        end = @pos - 1
-      else
-        end = @pos
-      @pos = @pos + 1
-      return @stringFromUint8Slice(start, end)
-    else
-      @pos = @pos + 1
-  return null
-
-# Little-endian IEEE754 32-bit floats
-DataView::readFloat = ->
-  ret = @getFloat32(@pos, true)
-  @pos = @pos + 4
-  return ret
-
-DataView::readUint8 = ->
-  ret = @getUint8(@pos)
-  @pos = @pos + 1
-  return ret
-
 assertEqual = (tested, expected, errorMessage) ->
   throw "Failed assertion: #{errorMessage}" if tested isnt expected
 
@@ -56,22 +6,11 @@ class RTI
   PI = 3.14159265
   { atan2, acos, sqrt, cos, sin, pow, min, max } = Math
 
-  constructor: (@url) ->
-    @loadFile()
+  constructor: (@dataStream) ->
 
-  loadFile: ->
-    xhr = new XMLHttpRequest()
-    xhr.open('GET', @url, true)
-    xhr.responseType = 'arraybuffer'
-    xhr.onload = (e) =>
-      @binaryFileBuffer = xhr.response
-    xhr.addEventListener("load", @onLoaded, false)
-    xhr.send(null)
-
-  onLoaded: =>
-    @dataStream = new DataView(@binaryFileBuffer)
-    console.log "Loaded RTI file: #{@binaryFileBuffer.byteLength} bytes"
-    console.log "Header:          #{@dataStream.peekLine()}"
+  parse: (completionHandler) =>
+    @parseHSH()
+    completionHandler()
 
   # Returns the index of an element in the HSHImage float array given the following arguments,
   # h - y position of the current pixel
@@ -156,7 +95,7 @@ class RTI
   # Compute weights based on the lighting direction
   computeWeights: (theta, phi) ->
 
-    weights = new Float64Array(16)
+    weights = new Float32Array(16)
 
     phi = phi + (2 * PI) if phi < 0
 
@@ -277,7 +216,7 @@ window.drawS = (theta, phi) ->
 window.draw = ( x, y, z) ->
   rti.renderImageHSH(window.drawContext, x, y, z)
 
-$ ->
-  rti = new RTI('rti/coin.rti')
-  window.rti = rti
-  window.assertEqual = assertEqual
+window.assertEqual = assertEqual
+
+window.jdc ?= {}
+window.jdc.RTI = RTI

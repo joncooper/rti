@@ -1,75 +1,6 @@
 (function() {
-  var RTI, assertEqual;
+  var RTI, assertEqual, _ref;
   var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
-
-  DataView.prototype.pos = 0;
-
-  DataView.prototype.stringFromUint8Slice = function(startOffset, endOffset) {
-    var getCharStr, i;
-    var _this = this;
-    getCharStr = function(i) {
-      return String.fromCharCode(_this.getUint8(i));
-    };
-    return ((function() {
-      var _results;
-      _results = [];
-      for (i = startOffset; startOffset <= endOffset ? i < endOffset : i > endOffset; startOffset <= endOffset ? i++ : i--) {
-        _results.push(getCharStr(i));
-      }
-      return _results;
-    })()).join('');
-  };
-
-  DataView.prototype.mark = function() {
-    return this.markedPos = this.pos;
-  };
-
-  DataView.prototype.reset = function() {
-    return this.pos = this.markedPos;
-  };
-
-  DataView.prototype.peekLine = function() {
-    var line;
-    this.mark();
-    line = this.readLine();
-    this.reset();
-    return line;
-  };
-
-  DataView.prototype.readLine = function() {
-    var end, start;
-    if (this.pos >= this.byteLength) return null;
-    start = this.pos;
-    end = -1;
-    while ((this.pos < this.byteLength) && (end < start)) {
-      if (this.getUint8(this.pos) === 0x0a) {
-        if ((this.pos > 0) && (this.getUint8(this.pos - 1) === 0x0d)) {
-          end = this.pos - 1;
-        } else {
-          end = this.pos;
-        }
-        this.pos = this.pos + 1;
-        return this.stringFromUint8Slice(start, end);
-      } else {
-        this.pos = this.pos + 1;
-      }
-    }
-    return null;
-  };
-
-  DataView.prototype.readFloat = function() {
-    var ret;
-    ret = this.getFloat32(this.pos, true);
-    this.pos = this.pos + 4;
-    return ret;
-  };
-
-  DataView.prototype.readUint8 = function() {
-    var ret;
-    ret = this.getUint8(this.pos);
-    this.pos = this.pos + 1;
-    return ret;
-  };
 
   assertEqual = function(tested, expected, errorMessage) {
     if (tested !== expected) throw "Failed assertion: " + errorMessage;
@@ -82,29 +13,14 @@
 
     atan2 = Math.atan2, acos = Math.acos, sqrt = Math.sqrt, cos = Math.cos, sin = Math.sin, pow = Math.pow, min = Math.min, max = Math.max;
 
-    function RTI(url) {
-      this.url = url;
-      this.onLoaded = __bind(this.onLoaded, this);
-      this.loadFile();
+    function RTI(dataStream) {
+      this.dataStream = dataStream;
+      this.parse = __bind(this.parse, this);
     }
 
-    RTI.prototype.loadFile = function() {
-      var xhr;
-      var _this = this;
-      xhr = new XMLHttpRequest();
-      xhr.open('GET', this.url, true);
-      xhr.responseType = 'arraybuffer';
-      xhr.onload = function(e) {
-        return _this.binaryFileBuffer = xhr.response;
-      };
-      xhr.addEventListener("load", this.onLoaded, false);
-      return xhr.send(null);
-    };
-
-    RTI.prototype.onLoaded = function() {
-      this.dataStream = new DataView(this.binaryFileBuffer);
-      console.log("Loaded RTI file: " + this.binaryFileBuffer.byteLength + " bytes");
-      return console.log("Header:          " + (this.dataStream.peekLine()));
+    RTI.prototype.parse = function(completionHandler) {
+      this.parseHSH();
+      return completionHandler();
     };
 
     RTI.prototype.getIndex = function(h, w, b, o) {
@@ -187,7 +103,7 @@
 
     RTI.prototype.computeWeights = function(theta, phi) {
       var weights;
-      weights = new Float64Array(16);
+      weights = new Float32Array(16);
       if (phi < 0) phi = phi + (2 * PI);
       weights[0] = 1 / sqrt(2 * PI);
       weights[1] = sqrt(6 / PI) * (cos(phi) * sqrt(cos(theta) - cos(theta) * cos(theta)));
@@ -306,11 +222,10 @@
     return rti.renderImageHSH(window.drawContext, x, y, z);
   };
 
-  $(function() {
-    var rti;
-    rti = new RTI('rti/coin.rti');
-    window.rti = rti;
-    return window.assertEqual = assertEqual;
-  });
+  window.assertEqual = assertEqual;
+
+  if ((_ref = window.jdc) == null) window.jdc = {};
+
+  window.jdc.RTI = RTI;
 
 }).call(this);
