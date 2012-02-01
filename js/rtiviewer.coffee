@@ -3,6 +3,7 @@
 #import "dataviewstream.coffee"
 #import "assertions.coffee"
 #import "rti.coffee"
+#import "jquery.mousewheel.js"
 
 # Load, parse and display the RTI file
 #
@@ -157,12 +158,14 @@ drawScene = (rti, LOG=false) ->
 
     @material.uniforms.weights.value = rti.computeWeights(sphericalC.theta, sphericalC.phi)
 
-  $('#three > canvas').mousemove(moveHandler)
-  canvas.onmousewheel = (event) =>
-    firstWheelDelta ?= event.wheelDeltaY
-    plane.scale.x *= 1.0 + ((event.wheelDeltaY / Math.abs(firstWheelDelta)) * 0.01)
+  zoomHandler = (deltaY) ->
+    plane.scale.x *= 1.0 + (deltaY * 0.01)
     plane.scale.x = Math.max(plane.scale.x, 1.0)
     plane.scale.y = plane.scale.x
+
+  $('#three > canvas').mousemove(moveHandler)
+  $('#three > canvas').mousewheel (event, delta, deltaX, deltaY) =>
+    zoomHandler(deltaY)
 
   animate = (t) ->
     camera.lookAt(scene.position)

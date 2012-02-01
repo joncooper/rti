@@ -298,6 +298,91 @@ RTI = (function() {
 
 })();
 
+/*! Copyright (c) 2011 Brandon Aaron (http://brandonaaron.net)
+ * Licensed under the MIT License (LICENSE.txt).
+ *
+ * Thanks to: http://adomas.org/javascript-mouse-wheel/ for some pointers.
+ * Thanks to: Mathias Bank(http://www.mathias-bank.de) for a scope bug fix.
+ * Thanks to: Seamus Leahy for adding deltaX and deltaY
+ *
+ * Version: 3.0.6
+ * 
+ * Requires: 1.2.2+
+ */
+
+(function($) {
+
+var types = ['DOMMouseScroll', 'mousewheel'];
+
+if ($.event.fixHooks) {
+    for ( var i=types.length; i; ) {
+        $.event.fixHooks[ types[--i] ] = $.event.mouseHooks;
+    }
+}
+
+$.event.special.mousewheel = {
+    setup: function() {
+        if ( this.addEventListener ) {
+            for ( var i=types.length; i; ) {
+                this.addEventListener( types[--i], handler, false );
+            }
+        } else {
+            this.onmousewheel = handler;
+        }
+    },
+    
+    teardown: function() {
+        if ( this.removeEventListener ) {
+            for ( var i=types.length; i; ) {
+                this.removeEventListener( types[--i], handler, false );
+            }
+        } else {
+            this.onmousewheel = null;
+        }
+    }
+};
+
+$.fn.extend({
+    mousewheel: function(fn) {
+        return fn ? this.bind("mousewheel", fn) : this.trigger("mousewheel");
+    },
+    
+    unmousewheel: function(fn) {
+        return this.unbind("mousewheel", fn);
+    }
+});
+
+
+function handler(event) {
+    var orgEvent = event || window.event, args = [].slice.call( arguments, 1 ), delta = 0, returnValue = true, deltaX = 0, deltaY = 0;
+    event = $.event.fix(orgEvent);
+    event.type = "mousewheel";
+    
+    // Old school scrollwheel delta
+    if ( orgEvent.wheelDelta ) { delta = orgEvent.wheelDelta/120; }
+    if ( orgEvent.detail     ) { delta = -orgEvent.detail/3; }
+    
+    // New school multidimensional scroll (touchpads) deltas
+    deltaY = delta;
+    
+    // Gecko
+    if ( orgEvent.axis !== undefined && orgEvent.axis === orgEvent.HORIZONTAL_AXIS ) {
+        deltaY = 0;
+        deltaX = -1*delta;
+    }
+    
+    // Webkit
+    if ( orgEvent.wheelDeltaY !== undefined ) { deltaY = orgEvent.wheelDeltaY/120; }
+    if ( orgEvent.wheelDeltaX !== undefined ) { deltaX = -1*orgEvent.wheelDeltaX/120; }
+    
+    // Add event and delta to the front of the arguments
+    args.unshift(event, delta, deltaX, deltaY);
+    
+    return ($.event.dispatch || $.event.handle).apply(this, args);
+}
+
+})(jQuery);
+
 var buildUniforms, drawScene, fragmentShader, vertexShader;
 
 vertexShader = "\nvarying vec2 pos;\n\nvoid main() {\n  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);\n  pos = uv;\n}\n";
@@ -345,7 +430,7 @@ buildUniforms = function(rti, theta, phi) {
 };
 
 drawScene = function(rti, LOG) {
-  var animate, camera, canvas, canvasPointToWorldPoint, moveHandler, plane, renderer, scene, uniforms,
+  var animate, camera, canvas, canvasPointToWorldPoint, moveHandler, plane, renderer, scene, uniforms, zoomHandler,
     _this = this;
   if (LOG == null) LOG = false;
   renderer = new THREE.WebGLRenderer();
@@ -396,15 +481,15 @@ drawScene = function(rti, LOG) {
     }
     return _this.material.uniforms.weights.value = rti.computeWeights(sphericalC.theta, sphericalC.phi);
   };
-  $('#three > canvas').mousemove(moveHandler);
-  canvas.onmousewheel = function(event) {
-    if (typeof firstWheelDelta === "undefined" || firstWheelDelta === null) {
-      firstWheelDelta = event.wheelDeltaY;
-    }
-    plane.scale.x *= 1.0 + ((event.wheelDeltaY / Math.abs(firstWheelDelta)) * 0.01);
+  zoomHandler = function(deltaY) {
+    plane.scale.x *= 1.0 + (deltaY * 0.01);
     plane.scale.x = Math.max(plane.scale.x, 1.0);
     return plane.scale.y = plane.scale.x;
   };
+  $('#three > canvas').mousemove(moveHandler);
+  $('#three > canvas').mousewheel(function(event, delta, deltaX, deltaY) {
+    return zoomHandler(deltaY);
+  });
   animate = function(t) {
     camera.lookAt(scene.position);
     renderer.render(scene, camera);
