@@ -87,7 +87,7 @@
     var animate, camera, moveHandler, plane, renderer, scene, uniforms;
     var _this = this;
     renderer = new THREE.WebGLRenderer();
-    renderer.setSize(600, 400);
+    renderer.setSize(rti.width, rti.height);
     $('#three').append(renderer.domElement);
     renderer.setClearColorHex(0x555555, 1.0);
     renderer.clear();
