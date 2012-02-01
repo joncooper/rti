@@ -1,10 +1,12 @@
-assertEqual = (tested, expected, errorMessage) ->
-  throw "Failed assertion: #{errorMessage}" if tested isnt expected
-
+# Parse RTI files
+# See http://c-h-i.org/technology/ptm/ptm.html
+# See doc/universal_rti_format_draft.doc
 class RTI
 
+  # Takes a DataViewStream
   constructor: (@dataStream) ->
 
+  # Fired periodically while parsing
   onParsing: (event) =>
     console.log "RTI parsed #{event.parsed} of #{event.total}"
 
@@ -12,7 +14,7 @@ class RTI
     @parseHSH()
     completionHandler()
 
-  # Returns the index of an element in the HSHImage float array given the following arguments,
+  # Returns the index of an element in the coefficient array
   # h - y position of the current pixel
   # w - x position of the current pixel
   # b - the current color channel
@@ -21,17 +23,16 @@ class RTI
   getIndex: (h, w, b, o) ->
     h * (@width * @bands * @order * @order) + w * (@bands * @order * @order) + b * (@order * @order) + o
 
-  # Returns a float array containing the entire RTI coefficient set. The order of elements in the float array is,
-  # rtiheight*rtiwidth*bands*terms
-  # (where terms = (order*order), for other variables check the comments above)
-
-  # RTI file info : These variables are initialize in the loadHSH function
-  # rtiwidth, rtiheight - Height and width of the loaded RTI
-  # bands - Number of color channels in the image, usually 3
-  # order - The order of the RTI reflectance model. The actual number of coefficients (i.e. terms) = order * order
+  # Parses the RTI file
+  #
+  # Sets: @coefficients: Uint8Array(width * height * color channels * polynomial terms)
+  # Sets: @weights:      Float32Array(terms)
+  # Sets: @scale:        Float32Array(terms)
+  # Sets: @bias:         Float32Array(terms)
+  # Sets: @width, @height
 
   parseHSH: ->
-    # strip all lines beginning with #; (used ifstream::infile.peek)
+    # strip all lines beginning with #
     @dataStream.readLine() while @dataStream.peekLine()[0] is '#'
 
     @file_type     = Number @dataStream.readLine()
@@ -69,15 +70,10 @@ class RTI
       for x in [0...@width]
         for b in [0...@bands]
           for t in [0...@terms]
+            # Populate the coefficients array
             @coefficients[@getIndex(y, x, b, t)] = @dataStream.readUint8()
-            # OpenGL ordering (i.e. flip-Y)
-            # @hshpixels[@getIndex(@height-1-y, x, b, t)] = value
+      # Fire parsing event per-row
       @onParsing({ total: @height, parsed: y})
-
-  # Render into an RGBA array and return it
-  # lx, ly, lz are the global light position
-  # // Renders an image under the current lighting position as specified by global variables lx, ly and lz
-  # // The HSHImage float array is passed as input, and an image with (bands) color channels is returned as the output
 
   # Compute weights based on the lighting direction
   computeWeights: (theta, phi) ->
@@ -107,10 +103,11 @@ class RTI
 
     return weights
 
-
+  # Render the RTI into an ImageData and blit it into a canvas context
+  # (lx, ly, lz) need to be on the surface of a sphere centered at the origin with radius 1.
   renderImageHSH: (context, lx, ly, lz) ->
 
-    sCoord = @cartesianToSpherical(lx, ly, lz)
+    sCoord = cartesianToSpherical(lx, ly, lz)
     weights = @computeWeights(sCoord.theta, sCoord.phi)
 
     console.log "Rendering:    #{@width} x #{@height}"
@@ -119,10 +116,8 @@ class RTI
 
     context.clearRect(0, 0, @width, @height)
     imagePixelData = context.createImageData(@width, @height)
-    outputBands = 4 # we are going to emit RGBA, not RGB
-
-    clamp = (value) ->
-      max(min(value, 1.0), 0.0)
+    # we are going to emit RGBA, not RGB
+    outputBands = 4 
 
     for j in [0...@height]
       for i in [0...@width]
@@ -143,8 +138,9 @@ class RTI
     window.imagePixelData = imagePixelData
     context.putImageData(imagePixelData, 0, 0)
 
+  # Build texture layers (one polynomial term per layer) for processing in GLSL shader
   makeTextures: ->
-    textures = {}
+    textures = []
     for term in [0...@terms]
       textureData = new Uint8Array(@width * @height * @bands)
       i = 0
@@ -155,55 +151,3 @@ class RTI
             i += 1
       textures[term] = textureData
     return textures
-
-window.go = ->
-  canvas = $('#rgbtexture > canvas')[0]
-  window.drawContext = canvas.getContext('2d')
-
-  console.log "Parsing RTI file..."
-  rti.parseHSH()
-  console.log "Parsed."
-
-  canvas.width = rti.width
-  canvas.height = rti.height
-
-  moveHandler = (event) =>
-    canvasOffset = $(canvas).offset()
-    x = event.clientX + Math.floor(canvasOffset.left)
-    y = event.clientY + Math.floor(canvasOffset.top) + 1
-
-    x -= canvas.width / 2
-    y *= -1
-    y += canvas.height / 2
-
-    # TODO: this is slightly wrong
-    console.log "clicked at", x, y
-
-    min_axis = Math.min(canvas.width, canvas.height) / 2
-    console.log "min_axis", min_axis
-
-    theta = Math.atan2(y, x)
-    r     = Math.min(Math.sqrt(x*x + y*y), min_axis) / min_axis # Clamp to radius of circle = min_axis
-    lx    = r * Math.cos(theta)
-    ly    = r * Math.sin(theta)
-    lz    = Math.sqrt(1.0*1.0 - (lx*lx) - (ly*ly))
-
-    console.log "theta, r, lx, ly", theta, r, lx, ly
-    window.draw(lx, ly, lz)
-
-  $('#rgbtexture > canvas').mousemove(moveHandler)
-
-window.drawS = (theta, phi) ->
-  x = Math.cos(theta) * Math.sin(phi)
-  y = Math.sin(theta) * Math.sin(phi)
-  z = Math.cos(phi)
-  console.log "Drawing: (#{x}, #{y}, #{z})"
-  window.draw(x, y, z)
-
-window.draw = ( x, y, z) ->
-  rti.renderImageHSH(window.drawContext, x, y, z)
-
-window.assertEqual = assertEqual
-
-window.jdc ?= {}
-window.jdc.RTI = RTI

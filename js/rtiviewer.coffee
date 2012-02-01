@@ -1,7 +1,18 @@
 #import "math.coffee"
 #import "binaryfile.coffee"
 #import "dataviewstream.coffee"
+#import "assertions.coffee"
 #import "rti.coffee"
+
+# Load, parse and display the RTI file
+#
+# Click and drag to pan
+# Scroll wheel to zoom
+# Move the mouse to relight
+
+# The vertex shader (GLSL):
+# - projects the geometry onto the view
+# - passes on the texture coordinates as the varying vec2 pos
 
 vertexShader = """
 
@@ -13,6 +24,12 @@ void main() {
 }
 
 """
+
+# The fragment shader (GLSL) calculates each pixel's intensity by:
+# - Sampling the coefficient from the texture array (which coerces it to a float)
+# - Rehydrating it by applying the scale and bias
+# - Multiplying it by the appropriate polynomial term weight
+# - Summing those weighted, rehydrated coefficients
 
 fragmentShader = """
 
@@ -41,14 +58,18 @@ void main() {
 
 """
 
+# Build the set of uniforms that will be passed to the shaders
+# - texture array (rtiData)
+# - bias
+# - scale
+# - weights
+
 buildUniforms = (rti, theta, phi) ->
 
-  @textureCache ?= rti.makeTextures()
-  textures = @textureCache
-
+  textures = rti.makeTextures()
   weights = rti.computeWeights(theta, phi)
 
-  texify = (i) =>
+  makeTexture = (i) =>
     t = new THREE.DataTexture(textures[i], rti.width, rti.height, THREE.RGBFormat)
     t.needsUpdate = true
     return t
@@ -66,13 +87,12 @@ buildUniforms = (rti, theta, phi) ->
     rtiData:
       type: 'tv'
       value: 0
-      texture: (texify(i) for i in [0...9])
+      texture: (makeTexture(i) for i in [0...9])
 
   return uniforms
 
-@uniforms = {}
-
-drawScene = (rti) ->
+# Draw the scene and attach mouse handlers
+drawScene = (rti, LOG=false) ->
 
   renderer = new THREE.WebGLRenderer()
   renderer.setSize(rti.width, rti.height)
@@ -101,33 +121,39 @@ drawScene = (rti) ->
   scene.add(plane)
   scene.add(camera)
 
-  moveHandler = (event) =>
-    canvas = $('#three > canvas')[0]
-    x = event.offsetX
-    y = event.offsetY
+  canvas = $('#three > canvas')[0]
 
+  canvasPointToWorldPoint = (x, y) ->
     x -= canvas.width / 2
     y *= -1
     y += canvas.height / 2
+    return [x, y]
 
+  # Relight based upon mouse position
+  moveHandler = (event) =>
+    [x, y] = canvasPointToWorldPoint(event.offsetX, event.offsetY)
+
+    # Clamp light position (TODO: better to clamp theta?)
     min_axis = Math.min(canvas.width, canvas.height) / 2
 
     phi   = Math.atan2(y, x)
-    r     = Math.min(Math.sqrt(x*x + y*y), min_axis - 50) / min_axis # Clamp to radius of circle = min_axis
+    r     = Math.min(Math.sqrt(x*x + y*y), min_axis - 50) / min_axis
     lx    = r * Math.cos(phi)
     ly    = r * Math.sin(phi)
     lz    = Math.sqrt(1.0*1.0 - (lx*lx) - (ly*ly))
 
-    # console.log "phi:   #{phi}"
-    # console.log "r:     #{r}"
-    # console.log "lx:    #{lx}"
-    # console.log "ly:    #{ly}"
-    # console.log "lz:    #{lz}"
+    if (LOG)
+      console.log "phi:   #{phi}"
+      console.log "r:     #{r}"
+      console.log "lx:    #{lx}"
+      console.log "ly:    #{ly}"
+      console.log "lz:    #{lz}"
 
     sphericalC = cartesianToSpherical(lx, ly, lz)
 
-    # console.log "theta: #{sphericalC.theta}"
-    # console.log "phi:   #{sphericalC.phi}"
+    if (LOG)
+      console.log "theta: #{sphericalC.theta}"
+      console.log "phi:   #{sphericalC.phi}"
 
     @material.uniforms.weights.value = rti.computeWeights(sphericalC.theta, sphericalC.phi)
 
@@ -155,7 +181,7 @@ $ ->
 
   rtiFile.load ->
     progressText.text('Parsing RTI file:')
-    rti = new jdc.RTI(rtiFile.dataStream)
+    rti = new RTI(new DataViewStream(rtiFile.dataStream))
     rti.onParsing = (event) =>
       updateProgressBar(event.parsed, event.total)
     rti.parse ->
