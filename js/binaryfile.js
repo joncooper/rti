@@ -18,7 +18,7 @@
     }
 
     BinaryFile.prototype.onProgress = function(e) {
-      if (e.lengthComputable) return console.log((e.loaded / e.total) * 100.0);
+      if (e.lengthComputable) return console.log("" + e.loaded + " of " + e.total);
     };
 
     BinaryFile.prototype.onLoaded = function() {

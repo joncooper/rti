@@ -9,7 +9,7 @@ class BinaryFile
 
   onProgress: (e) =>
     if e.lengthComputable
-      console.log((e.loaded / e.total) * 100.0)
+      console.log "#{e.loaded} of #{e.total}"
 
   onLoaded: =>
     @dataStream = new DataView(@buffer)
