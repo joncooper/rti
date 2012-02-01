@@ -397,6 +397,14 @@ drawScene = function(rti, LOG) {
     return _this.material.uniforms.weights.value = rti.computeWeights(sphericalC.theta, sphericalC.phi);
   };
   $('#three > canvas').mousemove(moveHandler);
+  canvas.onmousewheel = function(event) {
+    if (typeof firstWheelDelta === "undefined" || firstWheelDelta === null) {
+      firstWheelDelta = event.wheelDeltaY;
+    }
+    plane.scale.x *= 1.0 + ((event.wheelDeltaY / Math.abs(firstWheelDelta)) * 0.01);
+    plane.scale.x = Math.max(plane.scale.x, 1.0);
+    return plane.scale.y = plane.scale.x;
+  };
   animate = function(t) {
     camera.lookAt(scene.position);
     renderer.render(scene, camera);

@@ -158,6 +158,11 @@ drawScene = (rti, LOG=false) ->
     @material.uniforms.weights.value = rti.computeWeights(sphericalC.theta, sphericalC.phi)
 
   $('#three > canvas').mousemove(moveHandler)
+  canvas.onmousewheel = (event) =>
+    firstWheelDelta ?= event.wheelDeltaY
+    plane.scale.x *= 1.0 + ((event.wheelDeltaY / Math.abs(firstWheelDelta)) * 0.01)
+    plane.scale.x = Math.max(plane.scale.x, 1.0)
+    plane.scale.y = plane.scale.x
 
   animate = (t) ->
     camera.lookAt(scene.position)
