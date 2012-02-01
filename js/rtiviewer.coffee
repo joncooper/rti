@@ -125,7 +125,7 @@ drawScene = (rti) ->
     # console.log "ly:    #{ly}"
     # console.log "lz:    #{lz}"
 
-    sphericalC = rti.cartesianToSpherical(lx, ly, lz)
+    sphericalC = cartesianToSpherical(lx, ly, lz)
 
     # console.log "theta: #{sphericalC.theta}"
     # console.log "phi:   #{sphericalC.phi}"

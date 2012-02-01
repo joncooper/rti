@@ -3,9 +3,6 @@ assertEqual = (tested, expected, errorMessage) ->
 
 class RTI
 
-  PI = 3.14159265
-  { atan2, acos, sqrt, cos, sin, pow, min, max } = Math
-
   constructor: (@dataStream) ->
 
   parse: (completionHandler) =>
@@ -77,20 +74,6 @@ class RTI
   # lx, ly, lz are the global light position
   # // Renders an image under the current lighting position as specified by global variables lx, ly and lz
   # // The HSHImage float array is passed as input, and an image with (bands) color channels is returned as the output
-
-  sphericalToCartesian: (r, theta, phi) ->
-    {
-      x: r * cos(phi) * sin(theta)
-      y: r * sin(phi) * sin(theta)
-      z: r * cos(theta)
-    }
-
-  cartesianToSpherical: (x, y, z) ->
-    {
-      r:     sqrt(x*x + y*y + z*z)
-      theta: acos(z)
-      phi:   atan2(y, x)
-    }
 
   # Compute weights based on the lighting direction
   computeWeights: (theta, phi) ->
