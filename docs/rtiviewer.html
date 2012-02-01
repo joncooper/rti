@@ -1,0 +1,169 @@
+<!DOCTYPE html>  <html> <head>   <title>rtiviewer.coffee</title>   <meta http-equiv="content-type" content="text/html; charset=UTF-8">   <link rel="stylesheet" media="all" href="docco.css" /> </head> <body>   <div id="container">     <div id="background"></div>            <div id="jump_to">         Jump To &hellip;         <div id="jump_wrapper">           <div id="jump_page">                                           <a class="source" href="assertions.html">                 assertions.coffee               </a>                                           <a class="source" href="binaryfile.html">                 binaryfile.coffee               </a>                                           <a class="source" href="dataviewstream.html">                 dataviewstream.coffee               </a>                                           <a class="source" href="math.html">                 math.coffee               </a>                                           <a class="source" href="rti.html">                 rti.coffee               </a>                                           <a class="source" href="rtiviewer.html">                 rtiviewer.coffee               </a>                        </div>         </div>       </div>          <table cellpadding="0" cellspacing="0">       <thead>         <tr>           <th class="docs">             <h1>               rtiviewer.coffee             </h1>           </th>           <th class="code">           </th>         </tr>       </thead>       <tbody>                               <tr id="section-1">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-1">&#182;</a>               </div>               <p>import "math.coffee"
+import "binaryfile.coffee"
+import "dataviewstream.coffee"
+import "assertions.coffee"
+import "rti.coffee"</p>             </td>             <td class="code">               <div class="highlight"><pre></pre></div>             </td>           </tr>                               <tr id="section-2">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-2">&#182;</a>               </div>               <p>Load, parse and display the RTI file</p>
+
+<p>Click and drag to pan
+Scroll wheel to zoom
+Move the mouse to relight</p>             </td>             <td class="code">               <div class="highlight"><pre></pre></div>             </td>           </tr>                               <tr id="section-3">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-3">&#182;</a>               </div>               <p>The vertex shader (GLSL):
+- projects the geometry onto the view
+- passes on the texture coordinates as the varying vec2 pos</p>             </td>             <td class="code">               <div class="highlight"><pre><span class="nv">vertexShader = </span><span class="s2">&quot;&quot;&quot;</span>
+
+<span class="s2">varying vec2 pos;</span>
+
+<span class="s2">void main() {</span>
+<span class="s2">  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);</span>
+<span class="s2">  pos = uv;</span>
+<span class="s2">}</span>
+
+<span class="s2">&quot;&quot;&quot;</span></pre></div>             </td>           </tr>                               <tr id="section-4">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-4">&#182;</a>               </div>               <p>The fragment shader (GLSL) calculates each pixel's intensity by:
+- Sampling the coefficient from the texture array (which coerces it to a float)
+- Rehydrating it by applying the scale and bias
+- Multiplying it by the appropriate polynomial term weight
+- Summing those weighted, rehydrated coefficients</p>             </td>             <td class="code">               <div class="highlight"><pre><span class="nv">fragmentShader = </span><span class="s2">&quot;&quot;&quot;</span>
+
+<span class="s2">varying vec2 pos;</span>
+
+<span class="s2">uniform float scale[9];</span>
+<span class="s2">uniform float bias[9];</span>
+<span class="s2">uniform float weights[9];</span>
+
+<span class="s2">uniform sampler2D rtiData[9];</span>
+
+<span class="s2">void main() {</span>
+
+<span class="s2">  gl_FragColor  = (texture2D(rtiData[0], pos) * scale[0] + bias[0]) * weights[0];</span>
+<span class="s2">  gl_FragColor += (texture2D(rtiData[1], pos) * scale[1] + bias[1]) * weights[1];</span>
+<span class="s2">  gl_FragColor += (texture2D(rtiData[2], pos) * scale[2] + bias[2]) * weights[2];</span>
+<span class="s2">  gl_FragColor += (texture2D(rtiData[3], pos) * scale[3] + bias[3]) * weights[3];</span>
+<span class="s2">  gl_FragColor += (texture2D(rtiData[4], pos) * scale[4] + bias[4]) * weights[4];</span>
+<span class="s2">  gl_FragColor += (texture2D(rtiData[5], pos) * scale[5] + bias[5]) * weights[5];</span>
+<span class="s2">  gl_FragColor += (texture2D(rtiData[6], pos) * scale[6] + bias[6]) * weights[6];</span>
+<span class="s2">  gl_FragColor += (texture2D(rtiData[7], pos) * scale[7] + bias[7]) * weights[7];</span>
+<span class="s2">  gl_FragColor += (texture2D(rtiData[8], pos) * scale[8] + bias[8]) * weights[8];</span>
+<span class="s2">  gl_FragColor.a = 1.0;</span>
+
+<span class="s2">}</span>
+
+<span class="s2">&quot;&quot;&quot;</span></pre></div>             </td>           </tr>                               <tr id="section-5">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-5">&#182;</a>               </div>               <p>Build the set of uniforms that will be passed to the shaders
+- texture array (rtiData)
+- bias
+- scale
+- weights</p>             </td>             <td class="code">               <div class="highlight"><pre><span class="nv">buildUniforms = </span><span class="nf">(rti, theta, phi) -&gt;</span>
+
+  <span class="nv">textures = </span><span class="nx">rti</span><span class="p">.</span><span class="nx">makeTextures</span><span class="p">()</span>
+  <span class="nv">weights = </span><span class="nx">rti</span><span class="p">.</span><span class="nx">computeWeights</span><span class="p">(</span><span class="nx">theta</span><span class="p">,</span> <span class="nx">phi</span><span class="p">)</span>
+
+  <span class="nv">makeTexture = </span><span class="p">(</span><span class="nx">i</span><span class="p">)</span> <span class="o">=&gt;</span>
+    <span class="nv">t = </span><span class="k">new</span> <span class="nx">THREE</span><span class="p">.</span><span class="nx">DataTexture</span><span class="p">(</span><span class="nx">textures</span><span class="p">[</span><span class="nx">i</span><span class="p">],</span> <span class="nx">rti</span><span class="p">.</span><span class="nx">width</span><span class="p">,</span> <span class="nx">rti</span><span class="p">.</span><span class="nx">height</span><span class="p">,</span> <span class="nx">THREE</span><span class="p">.</span><span class="nx">RGBFormat</span><span class="p">)</span>
+    <span class="nv">t.needsUpdate = </span><span class="kc">true</span>
+    <span class="k">return</span> <span class="nx">t</span>
+
+  <span class="nv">uniforms =</span>
+    <span class="nv">bias:</span>
+      <span class="nv">type: </span><span class="s1">&#39;fv1&#39;</span>
+      <span class="nv">value: </span><span class="nx">rti</span><span class="p">.</span><span class="nx">bias</span>
+    <span class="nv">scale:</span>
+      <span class="nv">type: </span><span class="s1">&#39;fv1&#39;</span>
+      <span class="nv">value: </span><span class="nx">rti</span><span class="p">.</span><span class="nx">scale</span>
+    <span class="nv">weights:</span>
+      <span class="nv">type: </span><span class="s1">&#39;fv1&#39;</span>
+      <span class="nv">value: </span><span class="nx">weights</span>
+    <span class="nv">rtiData:</span>
+      <span class="nv">type: </span><span class="s1">&#39;tv&#39;</span>
+      <span class="nv">value: </span><span class="mi">0</span>
+      <span class="nv">texture: </span><span class="p">(</span><span class="nx">makeTexture</span><span class="p">(</span><span class="nx">i</span><span class="p">)</span> <span class="k">for</span> <span class="nx">i</span> <span class="k">in</span> <span class="p">[</span><span class="mi">0</span><span class="p">...</span><span class="mi">9</span><span class="p">])</span>
+
+  <span class="k">return</span> <span class="nx">uniforms</span></pre></div>             </td>           </tr>                               <tr id="section-6">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-6">&#182;</a>               </div>               <p>Draw the scene and attach mouse handlers</p>             </td>             <td class="code">               <div class="highlight"><pre><span class="nv">drawScene = </span><span class="nf">(rti, LOG=false) -&gt;</span>
+
+  <span class="nv">renderer = </span><span class="k">new</span> <span class="nx">THREE</span><span class="p">.</span><span class="nx">WebGLRenderer</span><span class="p">()</span>
+  <span class="nx">renderer</span><span class="p">.</span><span class="nx">setSize</span><span class="p">(</span><span class="nx">rti</span><span class="p">.</span><span class="nx">width</span><span class="p">,</span> <span class="nx">rti</span><span class="p">.</span><span class="nx">height</span><span class="p">)</span>
+  <span class="nx">$</span><span class="p">(</span><span class="s1">&#39;#three&#39;</span><span class="p">).</span><span class="nx">append</span><span class="p">(</span><span class="nx">renderer</span><span class="p">.</span><span class="nx">domElement</span><span class="p">)</span>
+  <span class="nx">renderer</span><span class="p">.</span><span class="nx">setClearColorHex</span><span class="p">(</span><span class="mh">0x555555</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+  <span class="nx">renderer</span><span class="p">.</span><span class="nx">clear</span><span class="p">()</span>
+
+  <span class="nv">scene = </span><span class="k">new</span> <span class="nx">THREE</span><span class="p">.</span><span class="nx">Scene</span><span class="p">()</span>
+  <span class="nv">camera = </span><span class="k">new</span> <span class="nx">THREE</span><span class="p">.</span><span class="nx">OrthographicCamera</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">100.0</span><span class="p">)</span>
+  <span class="nv">camera.position.z = </span><span class="mf">100.0</span>
+  <span class="nx">scene</span><span class="p">.</span><span class="nx">add</span><span class="p">(</span><span class="nx">camera</span><span class="p">)</span>
+
+  <span class="nv">uniforms = </span><span class="nx">buildUniforms</span><span class="p">(</span><span class="nx">rti</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="nx">PI</span><span class="p">)</span>
+
+  <span class="vi">@material = </span><span class="k">new</span> <span class="nx">THREE</span><span class="p">.</span><span class="nx">ShaderMaterial</span><span class="p">(</span>
+    <span class="nv">uniforms: </span><span class="nx">uniforms</span>
+    <span class="nv">fragmentShader: </span><span class="nx">fragmentShader</span>
+    <span class="nv">vertexShader: </span><span class="nx">vertexShader</span>
+  <span class="p">)</span>
+
+  <span class="nv">plane = </span><span class="k">new</span> <span class="nx">THREE</span><span class="p">.</span><span class="nx">Mesh</span><span class="p">(</span>
+    <span class="k">new</span> <span class="nx">THREE</span><span class="p">.</span><span class="nx">PlaneGeometry</span><span class="p">(</span><span class="mf">2.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="nx">@material</span>
+  <span class="p">)</span>
+
+  <span class="nx">scene</span><span class="p">.</span><span class="nx">add</span><span class="p">(</span><span class="nx">plane</span><span class="p">)</span>
+  <span class="nx">scene</span><span class="p">.</span><span class="nx">add</span><span class="p">(</span><span class="nx">camera</span><span class="p">)</span>
+
+  <span class="nv">canvas = </span><span class="nx">$</span><span class="p">(</span><span class="s1">&#39;#three &gt; canvas&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+  <span class="nv">canvasPointToWorldPoint = </span><span class="nf">(x, y) -&gt;</span>
+    <span class="nx">x</span> <span class="o">-=</span> <span class="nx">canvas</span><span class="p">.</span><span class="nx">width</span> <span class="err">/ 2</span>
+    <span class="nx">y</span> <span class="o">*=</span> <span class="o">-</span><span class="mi">1</span>
+    <span class="nx">y</span> <span class="o">+=</span> <span class="nx">canvas</span><span class="p">.</span><span class="nx">height</span> <span class="err">/ 2</span>
+    <span class="k">return</span> <span class="p">[</span><span class="nx">x</span><span class="p">,</span> <span class="nx">y</span><span class="p">]</span></pre></div>             </td>           </tr>                               <tr id="section-7">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-7">&#182;</a>               </div>               <p>Relight based upon mouse position</p>             </td>             <td class="code">               <div class="highlight"><pre>  <span class="nv">moveHandler = </span><span class="p">(</span><span class="nx">event</span><span class="p">)</span> <span class="o">=&gt;</span>
+    <span class="p">[</span><span class="nx">x</span><span class="p">,</span> <span class="nx">y</span><span class="p">]</span> <span class="o">=</span> <span class="nx">canvasPointToWorldPoint</span><span class="p">(</span><span class="nx">event</span><span class="p">.</span><span class="nx">offsetX</span><span class="p">,</span> <span class="nx">event</span><span class="p">.</span><span class="nx">offsetY</span><span class="p">)</span></pre></div>             </td>           </tr>                               <tr id="section-8">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-8">&#182;</a>               </div>               <p>Clamp light position (TODO: better to clamp theta?)</p>             </td>             <td class="code">               <div class="highlight"><pre>    <span class="nv">min_axis = </span><span class="nb">Math</span><span class="p">.</span><span class="nx">min</span><span class="p">(</span><span class="nx">canvas</span><span class="p">.</span><span class="nx">width</span><span class="p">,</span> <span class="nx">canvas</span><span class="p">.</span><span class="nx">height</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
+
+    <span class="nv">phi   = </span><span class="nb">Math</span><span class="p">.</span><span class="nx">atan2</span><span class="p">(</span><span class="nx">y</span><span class="p">,</span> <span class="nx">x</span><span class="p">)</span>
+    <span class="nv">r     = </span><span class="nb">Math</span><span class="p">.</span><span class="nx">min</span><span class="p">(</span><span class="nb">Math</span><span class="p">.</span><span class="nx">sqrt</span><span class="p">(</span><span class="nx">x</span><span class="o">*</span><span class="nx">x</span> <span class="o">+</span> <span class="nx">y</span><span class="o">*</span><span class="nx">y</span><span class="p">),</span> <span class="nx">min_axis</span> <span class="o">-</span> <span class="mi">50</span><span class="p">)</span> <span class="o">/</span> <span class="nx">min_axis</span>
+    <span class="nv">lx    = </span><span class="nx">r</span> <span class="o">*</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">cos</span><span class="p">(</span><span class="nx">phi</span><span class="p">)</span>
+    <span class="nv">ly    = </span><span class="nx">r</span> <span class="o">*</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">sin</span><span class="p">(</span><span class="nx">phi</span><span class="p">)</span>
+    <span class="nv">lz    = </span><span class="nb">Math</span><span class="p">.</span><span class="nx">sqrt</span><span class="p">(</span><span class="mf">1.0</span><span class="o">*</span><span class="mf">1.0</span> <span class="o">-</span> <span class="p">(</span><span class="nx">lx</span><span class="o">*</span><span class="nx">lx</span><span class="p">)</span> <span class="o">-</span> <span class="p">(</span><span class="nx">ly</span><span class="o">*</span><span class="nx">ly</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="nx">LOG</span><span class="p">)</span>
+      <span class="nx">console</span><span class="p">.</span><span class="nx">log</span> <span class="s2">&quot;phi:   #{phi}&quot;</span>
+      <span class="nx">console</span><span class="p">.</span><span class="nx">log</span> <span class="s2">&quot;r:     #{r}&quot;</span>
+      <span class="nx">console</span><span class="p">.</span><span class="nx">log</span> <span class="s2">&quot;lx:    #{lx}&quot;</span>
+      <span class="nx">console</span><span class="p">.</span><span class="nx">log</span> <span class="s2">&quot;ly:    #{ly}&quot;</span>
+      <span class="nx">console</span><span class="p">.</span><span class="nx">log</span> <span class="s2">&quot;lz:    #{lz}&quot;</span>
+
+    <span class="nv">sphericalC = </span><span class="nx">cartesianToSpherical</span><span class="p">(</span><span class="nx">lx</span><span class="p">,</span> <span class="nx">ly</span><span class="p">,</span> <span class="nx">lz</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="nx">LOG</span><span class="p">)</span>
+      <span class="nx">console</span><span class="p">.</span><span class="nx">log</span> <span class="s2">&quot;theta: #{sphericalC.theta}&quot;</span>
+      <span class="nx">console</span><span class="p">.</span><span class="nx">log</span> <span class="s2">&quot;phi:   #{sphericalC.phi}&quot;</span>
+
+    <span class="vi">@material.uniforms.weights.value = </span><span class="nx">rti</span><span class="p">.</span><span class="nx">computeWeights</span><span class="p">(</span><span class="nx">sphericalC</span><span class="p">.</span><span class="nx">theta</span><span class="p">,</span> <span class="nx">sphericalC</span><span class="p">.</span><span class="nx">phi</span><span class="p">)</span>
+
+  <span class="nx">$</span><span class="p">(</span><span class="s1">&#39;#three &gt; canvas&#39;</span><span class="p">).</span><span class="nx">mousemove</span><span class="p">(</span><span class="nx">moveHandler</span><span class="p">)</span>
+
+  <span class="nv">animate = </span><span class="nf">(t) -&gt;</span>
+    <span class="nx">camera</span><span class="p">.</span><span class="nx">lookAt</span><span class="p">(</span><span class="nx">scene</span><span class="p">.</span><span class="nx">position</span><span class="p">)</span>
+    <span class="nx">renderer</span><span class="p">.</span><span class="nx">render</span><span class="p">(</span><span class="nx">scene</span><span class="p">,</span> <span class="nx">camera</span><span class="p">)</span>
+    <span class="nb">window</span><span class="p">.</span><span class="nx">requestAnimationFrame</span><span class="p">(</span><span class="nx">animate</span><span class="p">,</span> <span class="nx">renderer</span><span class="p">.</span><span class="nx">domElement</span><span class="p">)</span>
+
+  <span class="nx">animate</span><span class="p">(</span><span class="k">new</span> <span class="nb">Date</span><span class="p">().</span><span class="nx">getTime</span><span class="p">())</span>
+
+<span class="nx">$</span> <span class="o">-&gt;</span>
+  <span class="nv">progressText = </span><span class="nx">$</span><span class="p">(</span><span class="s1">&#39;#loading &gt; span&#39;</span><span class="p">)</span>
+  <span class="nv">progressBar = </span><span class="nx">$</span><span class="p">(</span><span class="s1">&#39;progress&#39;</span><span class="p">)</span>
+
+  <span class="nv">updateProgressBar = </span><span class="nf">(current, total) -&gt;</span>
+    <span class="nv">completionPct = </span><span class="p">(</span><span class="nx">current</span> <span class="err">/ total) * 100.0</span>
+    <span class="nx">progressBar</span><span class="p">.</span><span class="nx">attr</span><span class="p">(</span><span class="s1">&#39;value&#39;</span><span class="p">,</span> <span class="nx">completionPct</span><span class="p">)</span>
+
+  <span class="nv">rtiFile = </span><span class="k">new</span> <span class="nx">jdc</span><span class="p">.</span><span class="nx">BinaryFile</span><span class="p">(</span><span class="s1">&#39;rti/coin.rti&#39;</span><span class="p">)</span>
+  <span class="nv">rtiFile.onProgress = </span><span class="p">(</span><span class="nx">event</span><span class="p">)</span> <span class="o">=&gt;</span>
+    <span class="k">if</span> <span class="nx">event</span><span class="p">.</span><span class="nx">lengthComputable</span>
+      <span class="nx">updateProgressBar</span><span class="p">(</span><span class="nx">event</span><span class="p">.</span><span class="nx">loaded</span><span class="p">,</span> <span class="nx">event</span><span class="p">.</span><span class="nx">total</span><span class="p">)</span>
+
+  <span class="nx">rtiFile</span><span class="p">.</span><span class="nx">load</span> <span class="o">-&gt;</span>
+    <span class="nx">progressText</span><span class="p">.</span><span class="nx">text</span><span class="p">(</span><span class="s1">&#39;Parsing RTI file:&#39;</span><span class="p">)</span>
+    <span class="nv">rti = </span><span class="k">new</span> <span class="nx">RTI</span><span class="p">(</span><span class="k">new</span> <span class="nx">DataViewStream</span><span class="p">(</span><span class="nx">rtiFile</span><span class="p">.</span><span class="nx">dataStream</span><span class="p">))</span>
+    <span class="nv">rti.onParsing = </span><span class="p">(</span><span class="nx">event</span><span class="p">)</span> <span class="o">=&gt;</span>
+      <span class="nx">updateProgressBar</span><span class="p">(</span><span class="nx">event</span><span class="p">.</span><span class="nx">parsed</span><span class="p">,</span> <span class="nx">event</span><span class="p">.</span><span class="nx">total</span><span class="p">)</span>
+    <span class="nx">rti</span><span class="p">.</span><span class="nx">parse</span> <span class="o">-&gt;</span>
+      <span class="nx">progressText</span><span class="p">.</span><span class="nx">hide</span><span class="p">()</span>
+      <span class="nx">progressBar</span><span class="p">.</span><span class="nx">hide</span><span class="p">()</span>
+      <span class="nx">drawScene</span><span class="p">(</span><span class="nx">rti</span><span class="p">)</span>
+
+</pre></div>             </td>           </tr>                </tbody>     </table>   </div> </body> </html> 
