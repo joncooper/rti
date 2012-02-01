@@ -3,9 +3,43 @@
   <head>
     <title>GLSL RTI Viewer</title>
     <style>
-      #container {
-        width: 400px;
-        height: 400px;
+      body {
+        margin: 0px;
+        padding: 0px;
+      }
+      header {
+        width: 100%;
+        height: 48px;
+        position: fixed;
+        top: 0px;
+        background-color: black;
+        font-size: 36px;
+        color: white;
+        margin-bottom: 48px;
+      }
+      header span {
+        margin-left: 48px;
+        vertical-align: middle;
+      }
+      header #loading {
+        position: fixed;
+        margin-right: 48px;
+        top: 0px;
+        right: 0px;
+      }
+      progress {
+        width: 200px;
+        vertical-align: -webkit-baseline-middle;
+      }
+      #three {
+        width: 100%;
+        padding-top: 84px;
+      }
+      #three > canvas {
+        margin-left: auto;
+        margin-right: auto;
+        position: relative;
+        display: block;
       }
     </style>
     <script src="js/jquery.min.js"></script>
@@ -14,6 +48,13 @@
     <script src="js/rtiviewer.js"></script>
   </head>
   <body>
+    <header>
+      <span>GLSL RTI Viewer</span>
+      <div id="loading">
+        <span>Loading RTI file: </span>
+        <progress value="0" max="100">
+      </div>
+    </header>
     <div id="three">
     </div>
     <!-- <script>document.write('<script src="http://' + (location.host || 'localhost').split(':')[0] + ':35729/livereload.js?snipver=1"></' + 'script>')</script> -->

@@ -5,6 +5,9 @@ class RTI
 
   constructor: (@dataStream) ->
 
+  onParsing: (event) =>
+    console.log "RTI parsed #{event.parsed} of #{event.total}"
+
   parse: (completionHandler) =>
     @parseHSH()
     completionHandler()
@@ -69,6 +72,7 @@ class RTI
             @coefficients[@getIndex(y, x, b, t)] = @dataStream.readUint8()
             # OpenGL ordering (i.e. flip-Y)
             # @hshpixels[@getIndex(@height-1-y, x, b, t)] = value
+      @onParsing({ total: @height, parsed: y})
 
   # Render into an RGBA array and return it
   # lx, ly, lz are the global light position

@@ -103,9 +103,8 @@ drawScene = (rti) ->
 
   moveHandler = (event) =>
     canvas = $('#three > canvas')[0]
-    canvasOffset = $(canvas).offset()
-    x = event.clientX + Math.floor(canvasOffset.left)
-    y = event.clientY + Math.floor(canvasOffset.top) + 1
+    x = event.offsetX
+    y = event.offsetY
 
     x -= canvas.width / 2
     y *= -1
@@ -142,8 +141,24 @@ drawScene = (rti) ->
   animate(new Date().getTime())
 
 $ ->
+  progressText = $('#loading > span')
+  progressBar = $('progress')
+
+  updateProgressBar = (current, total) ->
+    completionPct = (current / total) * 100.0
+    progressBar.attr('value', completionPct)
+
   rtiFile = new jdc.BinaryFile('rti/coin.rti')
+  rtiFile.onProgress = (event) =>
+    if event.lengthComputable
+      updateProgressBar(event.loaded, event.total)
+
   rtiFile.load ->
+    progressText.text('Parsing RTI file:')
     rti = new jdc.RTI(rtiFile.dataStream)
+    rti.onParsing = (event) =>
+      updateProgressBar(event.parsed, event.total)
     rti.parse ->
+      progressText.hide()
+      progressBar.hide()
       drawScene(rti)

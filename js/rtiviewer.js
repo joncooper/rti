@@ -146,7 +146,12 @@ RTI = (function() {
   function RTI(dataStream) {
     this.dataStream = dataStream;
     this.parse = __bind(this.parse, this);
+    this.onParsing = __bind(this.onParsing, this);
   }
+
+  RTI.prototype.onParsing = function(event) {
+    return console.log("RTI parsed " + event.parsed + " of " + event.total);
+  };
 
   RTI.prototype.parse = function(completionHandler) {
     this.parseHSH();
@@ -158,7 +163,7 @@ RTI = (function() {
   };
 
   RTI.prototype.parseHSH = function() {
-    var b, header_line_2, header_line_3, i, t, x, y, _ref, _ref2, _ref3, _results;
+    var b, header_line_2, header_line_3, i, t, x, y, _ref, _ref2, _ref3, _ref4, _ref5, _ref6, _results;
     while (this.dataStream.peekLine()[0] === '#') {
       this.dataStream.readLine();
     }
@@ -189,28 +194,17 @@ RTI = (function() {
     }
     _results = [];
     for (y = 0, _ref3 = this.height; 0 <= _ref3 ? y < _ref3 : y > _ref3; 0 <= _ref3 ? y++ : y--) {
-      _results.push((function() {
-        var _ref4, _results2;
-        _results2 = [];
-        for (x = 0, _ref4 = this.width; 0 <= _ref4 ? x < _ref4 : x > _ref4; 0 <= _ref4 ? x++ : x--) {
-          _results2.push((function() {
-            var _ref5, _results3;
-            _results3 = [];
-            for (b = 0, _ref5 = this.bands; 0 <= _ref5 ? b < _ref5 : b > _ref5; 0 <= _ref5 ? b++ : b--) {
-              _results3.push((function() {
-                var _ref6, _results4;
-                _results4 = [];
-                for (t = 0, _ref6 = this.terms; 0 <= _ref6 ? t < _ref6 : t > _ref6; 0 <= _ref6 ? t++ : t--) {
-                  _results4.push(this.coefficients[this.getIndex(y, x, b, t)] = this.dataStream.readUint8());
-                }
-                return _results4;
-              }).call(this));
-            }
-            return _results3;
-          }).call(this));
+      for (x = 0, _ref4 = this.width; 0 <= _ref4 ? x < _ref4 : x > _ref4; 0 <= _ref4 ? x++ : x--) {
+        for (b = 0, _ref5 = this.bands; 0 <= _ref5 ? b < _ref5 : b > _ref5; 0 <= _ref5 ? b++ : b--) {
+          for (t = 0, _ref6 = this.terms; 0 <= _ref6 ? t < _ref6 : t > _ref6; 0 <= _ref6 ? t++ : t--) {
+            this.coefficients[this.getIndex(y, x, b, t)] = this.dataStream.readUint8();
+          }
         }
-        return _results2;
-      }).call(this));
+      }
+      _results.push(this.onParsing({
+        total: this.height,
+        parsed: y
+      }));
     }
     return _results;
   };
@@ -413,11 +407,10 @@ drawScene = function(rti) {
   scene.add(plane);
   scene.add(camera);
   moveHandler = function(event) {
-    var canvas, canvasOffset, lx, ly, lz, min_axis, phi, r, sphericalC, x, y;
+    var canvas, lx, ly, lz, min_axis, phi, r, sphericalC, x, y;
     canvas = $('#three > canvas')[0];
-    canvasOffset = $(canvas).offset();
-    x = event.clientX + Math.floor(canvasOffset.left);
-    y = event.clientY + Math.floor(canvasOffset.top) + 1;
+    x = event.offsetX;
+    y = event.offsetY;
     x -= canvas.width / 2;
     y *= -1;
     y += canvas.height / 2;
@@ -440,12 +433,32 @@ drawScene = function(rti) {
 };
 
 $(function() {
-  var rtiFile;
+  var progressBar, progressText, rtiFile, updateProgressBar,
+    _this = this;
+  progressText = $('#loading > span');
+  progressBar = $('progress');
+  updateProgressBar = function(current, total) {
+    var completionPct;
+    completionPct = (current / total) * 100.0;
+    return progressBar.attr('value', completionPct);
+  };
   rtiFile = new jdc.BinaryFile('rti/coin.rti');
+  rtiFile.onProgress = function(event) {
+    if (event.lengthComputable) {
+      return updateProgressBar(event.loaded, event.total);
+    }
+  };
   return rtiFile.load(function() {
-    var rti;
+    var rti,
+      _this = this;
+    progressText.text('Parsing RTI file:');
     rti = new jdc.RTI(rtiFile.dataStream);
+    rti.onParsing = function(event) {
+      return updateProgressBar(event.parsed, event.total);
+    };
     return rti.parse(function() {
+      progressText.hide();
+      progressBar.hide();
       return drawScene(rti);
     });
   });
