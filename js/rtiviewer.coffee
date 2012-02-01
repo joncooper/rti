@@ -1,8 +1,7 @@
-PI = 3.141592653589793
-
-# TODO: clean up
-# TODO: click and drag to move
-# TODO: mouse wheel to zoom
+#import "math.coffee"
+#import "binaryfile.coffee"
+#import "dataviewstream.coffee"
+#import "rti.coffee"
 
 vertexShader = """
 

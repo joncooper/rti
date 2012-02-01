@@ -1,7 +1,5 @@
 (function() {
-  var PI, buildUniforms, drawScene, fragmentShader, vertexShader;
-
-  PI = 3.141592653589793;
+  var buildUniforms, drawScene, fragmentShader, vertexShader;
 
   vertexShader = "\nvarying vec2 pos;\n\nvoid main() {\n  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);\n  pos = uv;\n}\n";
 
