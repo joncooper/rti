@@ -23,6 +23,6 @@ cartesianToSpherical = (x, y, z) ->
     phi:   atan2(y, x)
   }
 
-# Clamp value into the range [0.0, 1.0]
-clamp = (value) ->
-  max(min(value, 1.0), 0.0)
+# Clamp value into the range [0.0, 1.0] or [low, high]
+clamp = (value, low=0.0, high=1.0) ->
+  max(min(value, high), low)

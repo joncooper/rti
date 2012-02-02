@@ -1,20 +1,13 @@
-#import "math.coffee"
-#import "binaryfile.coffee"
-#import "dataviewstream.coffee"
-#import "assertions.coffee"
-#import "rti.coffee"
-#import "jquery.mousewheel.js"
-
 # Load, parse and display the RTI file
 #
-# Click and drag to pan
-# Scroll wheel to zoom
-# Move the mouse to relight
+# * Click and drag to pan
+# * Scroll wheel to zoom
+# * Move the mouse to relight
 
 # The vertex shader (GLSL):
-# - projects the geometry onto the view
-# - passes on the texture coordinates as the varying vec2 pos
-
+#
+# * projects the geometry onto the view
+# * passes on the texture coordinates as the varying vec2 pos
 vertexShader = """
 
 varying vec2 pos;
@@ -27,11 +20,11 @@ void main() {
 """
 
 # The fragment shader (GLSL) calculates each pixel's intensity by:
-# - Sampling the coefficient from the texture array (which coerces it to a float)
-# - Rehydrating it by applying the scale and bias
-# - Multiplying it by the appropriate polynomial term weight
-# - Summing those weighted, rehydrated coefficients
-
+#
+# * Sampling the coefficient from the texture array (which coerces it to a float)
+# * Rehydrating it by applying the scale and bias
+# * Multiplying it by the appropriate polynomial term weight
+# * Summing those weighted, rehydrated coefficients
 fragmentShader = """
 
 varying vec2 pos;
@@ -60,21 +53,25 @@ void main() {
 """
 
 # Build the set of uniforms that will be passed to the shaders
-# - texture array (rtiData)
-# - bias
-# - scale
-# - weights
-
+#
+# * texture array (rtiData)
+# * bias
+# * scale
+# * weights
 buildUniforms = (rti, theta, phi) ->
 
+  # Pack coefficients for each term into an array of RGB tuples in a Uint8Array
   textures = rti.makeTextures()
+  # Generate the initial weights given light coordinates
   weights = rti.computeWeights(theta, phi)
 
+  # Turn a raw texture buffer into a THREE (and GL) texture, and push it to the GPU
   makeTexture = (i) =>
     t = new THREE.DataTexture(textures[i], rti.width, rti.height, THREE.RGBFormat)
     t.needsUpdate = true
     return t
 
+  # Build the initial set of uniforms for our shader
   uniforms =
     bias:
       type: 'fv1'
@@ -92,22 +89,25 @@ buildUniforms = (rti, theta, phi) ->
 
   return uniforms
 
-# Draw the scene and attach mouse handlers
+#### Draw the scene and attach mouse handlers
 drawScene = (rti, LOG=false) ->
 
+  # Attach the renderer
   renderer = new THREE.WebGLRenderer()
   renderer.setSize(rti.width, rti.height)
   $('#three').append(renderer.domElement)
   renderer.setClearColorHex(0x555555, 1.0)
   renderer.clear()
+  canvas = $('#three > canvas')[0]
 
+  # Set up the scene
   scene = new THREE.Scene()
   camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100.0)
   camera.position.z = 100.0
   scene.add(camera)
 
+  # Bind the uniforms and shaders to the plane we'll use for display
   uniforms = buildUniforms(rti, 0.0, PI)
-
   @material = new THREE.ShaderMaterial(
     uniforms: uniforms
     fragmentShader: fragmentShader
@@ -119,18 +119,20 @@ drawScene = (rti, LOG=false) ->
     @material
   )
 
+  # Complete building the scene
   scene.add(plane)
   scene.add(camera)
 
-  canvas = $('#three > canvas')[0]
-
+  # Map (x,y) on the canvas into (x,y) in scene (GL) space
   canvasPointToWorldPoint = (x, y) ->
     x -= canvas.width / 2
     y *= -1
     y += canvas.height / 2
     return [x, y]
 
-  # Relight based upon mouse position
+  #### Bind mouse handlers
+
+  # Mouse move handler - relight based upon mouse position
   moveHandler = (event) =>
     [x, y] = canvasPointToWorldPoint(event.offsetX, event.offsetY)
 
@@ -158,6 +160,7 @@ drawScene = (rti, LOG=false) ->
 
     @material.uniforms.weights.value = rti.computeWeights(sphericalC.theta, sphericalC.phi)
 
+  # Zoom handler - zoom in/out
   zoomHandler = (deltaY) ->
     plane.scale.x *= 1.0 + (deltaY * 0.01)
     plane.scale.x = Math.max(plane.scale.x, 1.0)
@@ -167,6 +170,7 @@ drawScene = (rti, LOG=false) ->
   $('#three > canvas').mousewheel (event, delta, deltaX, deltaY) =>
     zoomHandler(deltaY)
 
+  # Fired every animation tick
   animate = (t) ->
     camera.lookAt(scene.position)
     renderer.render(scene, camera)
@@ -174,6 +178,7 @@ drawScene = (rti, LOG=false) ->
 
   animate(new Date().getTime())
 
+#### Entry point
 $ ->
   progressText = $('#loading > span')
   progressBar = $('progress')
@@ -182,6 +187,7 @@ $ ->
     completionPct = (current / total) * 100.0
     progressBar.attr('value', completionPct)
 
+  # Load the RTI file
   rtiFile = new jdc.BinaryFile('rti/coin.rti')
   rtiFile.onProgress = (event) =>
     if event.lengthComputable
@@ -192,6 +198,7 @@ $ ->
     rti = new RTI(new DataViewStream(rtiFile.dataStream))
     rti.onParsing = (event) =>
       updateProgressBar(event.parsed, event.total)
+    #### Parse and draw the scene
     rti.parse ->
       progressText.hide()
       progressBar.hide()

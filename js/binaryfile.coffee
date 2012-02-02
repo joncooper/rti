@@ -1,3 +1,6 @@
+# Download a file into a DataView backed by an ArrayBuffer.
+# Helpful if you need to parse a binary file format.
+
 class BinaryFile
 
   constructor: (@url) ->
@@ -21,6 +24,3 @@ class BinaryFile
     @xhr.addEventListener('load', @onLoaded, false)
     @xhr.addEventListener('progress', @onProgress, false)
     @xhr.send(null)
-
-window.jdc ?= {}
-window.jdc.BinaryFile = BinaryFile
