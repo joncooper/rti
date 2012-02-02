@@ -515,14 +515,13 @@ drawScene = function(rti) {
 
 $(function() {
   var rtiFile;
+  $('.source').click(function() {
+    return window.location = "docs/rtiviewer.html";
+  });
   rtiFile = new BinaryFile('rti/coin.rti');
   return rtiFile.load(function() {
-    var doNothing, rti;
+    var rti;
     rti = new RTI(new DataViewStream(rtiFile.dataStream));
-    doNothing = function() {
-      return console.log('woo');
-    };
-    setTimeout(doNothing, 100000000);
     return rti.parse(function() {
       $('.loading').removeClass('loading');
       return drawScene(rti);

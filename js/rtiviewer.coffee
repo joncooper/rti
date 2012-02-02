@@ -189,6 +189,10 @@ drawScene = (rti) ->
 #### Entry point
 
 $ ->
+  # Bind click handler
+  $('.source').click ->
+    window.location = "docs/rtiviewer.html"
+
   # Load the RTI file
   rtiFile = new BinaryFile('rti/coin.rti')
   rtiFile.load ->
