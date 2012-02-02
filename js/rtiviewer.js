@@ -1,9 +1,9 @@
 (function() {
-var PI, acos, atan2, cartesianToSpherical, clamp, cos, max, min, pow, sin, sphericalToCartesian, sqrt;
+var PI, abs, acos, atan2, cartesianToSpherical, clamp, cos, max, min, pow, sin, sphericalToCartesian, sqrt;
 
 PI = 3.141592653589793;
 
-atan2 = Math.atan2, acos = Math.acos, sqrt = Math.sqrt, cos = Math.cos, sin = Math.sin, pow = Math.pow, min = Math.min, max = Math.max;
+abs = Math.abs, atan2 = Math.atan2, acos = Math.acos, sqrt = Math.sqrt, cos = Math.cos, sin = Math.sin, pow = Math.pow, min = Math.min, max = Math.max;
 
 sphericalToCartesian = function(r, theta, phi) {
   return {
@@ -427,10 +427,9 @@ buildUniforms = function(rti, theta, phi) {
   return uniforms;
 };
 
-drawScene = function(rti, LOG) {
-  var animate, camera, canvas, canvasPointToWorldPoint, moveHandler, plane, renderer, scene, uniforms, zoomHandler,
+drawScene = function(rti) {
+  var animate, camera, canvas, centerCanvasPoint, moveHandler, panHandler, plane, renderer, scene, uniforms, zoomHandler,
     _this = this;
-  if (LOG == null) LOG = false;
   renderer = new THREE.WebGLRenderer();
   renderer.setSize(rti.width, rti.height);
   $('#three').append(renderer.domElement);
@@ -450,7 +449,7 @@ drawScene = function(rti, LOG) {
   plane = new THREE.Mesh(new THREE.PlaneGeometry(2.0, 2.0, 1, 1), this.material);
   scene.add(plane);
   scene.add(camera);
-  canvasPointToWorldPoint = function(x, y) {
+  centerCanvasPoint = function(x, y) {
     x -= canvas.width / 2;
     y *= -1;
     y += canvas.height / 2;
@@ -458,29 +457,44 @@ drawScene = function(rti, LOG) {
   };
   moveHandler = function(event) {
     var lx, ly, lz, min_axis, phi, r, sphericalC, x, y, _ref;
-    _ref = canvasPointToWorldPoint(event.offsetX, event.offsetY), x = _ref[0], y = _ref[1];
+    if (_this.dragging) return;
+    _ref = centerCanvasPoint(event.offsetX, event.offsetY), x = _ref[0], y = _ref[1];
     min_axis = Math.min(canvas.width, canvas.height) / 2;
     phi = Math.atan2(y, x);
     r = Math.min(Math.sqrt(x * x + y * y), min_axis - 50) / min_axis;
     lx = r * Math.cos(phi);
     ly = r * Math.sin(phi);
     lz = Math.sqrt(1.0 * 1.0 - (lx * lx) - (ly * ly));
-    if (LOG) {
-      console.log("phi:   " + phi);
-      console.log("r:     " + r);
-      console.log("lx:    " + lx);
-      console.log("ly:    " + ly);
-      console.log("lz:    " + lz);
-    }
     sphericalC = cartesianToSpherical(lx, ly, lz);
-    if (LOG) {
-      console.log("theta: " + sphericalC.theta);
-      console.log("phi:   " + sphericalC.phi);
-    }
     return _this.material.uniforms.weights.value = rti.computeWeights(sphericalC.theta, sphericalC.phi);
   };
+  panHandler = function(event) {
+    var deltaX, deltaY;
+    deltaX = event.offsetX - this.dragStart.x;
+    deltaY = event.offsetY - this.dragStart.y;
+    plane.position.x = planeStart.x + ((deltaX / (canvas.width * plane.scale.x)) * (2.0 * plane.scale.x));
+    return plane.position.y = planeStart.y + ((-deltaY / (canvas.height * plane.scale.y)) * (2.0 * plane.scale.y));
+  };
+  $(canvas).mousedown(function(event) {
+    _this.dragging = true;
+    _this.dragStart = {
+      x: event.offsetX,
+      y: event.offsetY
+    };
+    return _this.planeStart = {
+      x: plane.position.x,
+      y: plane.position.y
+    };
+  });
+  $(canvas).mousemove(function(event) {
+    if (!_this.dragging) return;
+    return panHandler(event);
+  });
+  $(canvas).mouseup(function(event) {
+    return _this.dragging = false;
+  });
   zoomHandler = function(deltaY) {
-    plane.scale.x *= 1.0 + (deltaY * 0.01);
+    plane.scale.x += deltaY * 0.05;
     plane.scale.x = Math.max(plane.scale.x, 1.0);
     return plane.scale.y = plane.scale.x;
   };

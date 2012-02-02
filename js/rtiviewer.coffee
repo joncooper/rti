@@ -90,7 +90,7 @@ buildUniforms = (rti, theta, phi) ->
   return uniforms
 
 #### Draw the scene and attach mouse handlers
-drawScene = (rti, LOG=false) ->
+drawScene = (rti) ->
 
   # Attach the renderer
   renderer = new THREE.WebGLRenderer()
@@ -123,8 +123,8 @@ drawScene = (rti, LOG=false) ->
   scene.add(plane)
   scene.add(camera)
 
-  # Map (x,y) on the canvas into (x,y) in scene (GL) space
-  canvasPointToWorldPoint = (x, y) ->
+  # Map (x,y) on the canvas from space [(0, width), (0, height)] -> [(-width/2, width/2), (height/2, -height/2)]
+  centerCanvasPoint = (x, y) ->
     x -= canvas.width / 2
     y *= -1
     y += canvas.height / 2
@@ -134,7 +134,8 @@ drawScene = (rti, LOG=false) ->
 
   # Mouse move handler - relight based upon mouse position
   moveHandler = (event) =>
-    [x, y] = canvasPointToWorldPoint(event.offsetX, event.offsetY)
+    return if @dragging
+    [x, y] = centerCanvasPoint(event.offsetX, event.offsetY)
 
     # Clamp light position (TODO: better to clamp theta?)
     min_axis = Math.min(canvas.width, canvas.height) / 2
@@ -144,25 +145,32 @@ drawScene = (rti, LOG=false) ->
     lx    = r * Math.cos(phi)
     ly    = r * Math.sin(phi)
     lz    = Math.sqrt(1.0*1.0 - (lx*lx) - (ly*ly))
-
-    if (LOG)
-      console.log "phi:   #{phi}"
-      console.log "r:     #{r}"
-      console.log "lx:    #{lx}"
-      console.log "ly:    #{ly}"
-      console.log "lz:    #{lz}"
-
     sphericalC = cartesianToSpherical(lx, ly, lz)
-
-    if (LOG)
-      console.log "theta: #{sphericalC.theta}"
-      console.log "phi:   #{sphericalC.phi}"
 
     @material.uniforms.weights.value = rti.computeWeights(sphericalC.theta, sphericalC.phi)
 
+  # Drag handler - pan
+  panHandler = (event) ->
+    deltaX = event.offsetX - @dragStart.x
+    deltaY = event.offsetY - @dragStart.y
+    plane.position.x = planeStart.x + ((deltaX / (canvas.width * plane.scale.x)) * (2.0 * plane.scale.x))
+    plane.position.y = planeStart.y + ((-deltaY / (canvas.height * plane.scale.y)) * (2.0 * plane.scale.y))
+
+  $(canvas).mousedown (event) =>
+    @dragging = true
+    @dragStart = {x: event.offsetX, y: event.offsetY}
+    @planeStart = {x: plane.position.x, y: plane.position.y}
+
+  $(canvas).mousemove (event) =>
+    return unless @dragging
+    panHandler(event)
+
+  $(canvas).mouseup (event) =>
+    @dragging = false
+
   # Zoom handler - zoom in/out
   zoomHandler = (deltaY) ->
-    plane.scale.x *= 1.0 + (deltaY * 0.01)
+    plane.scale.x += (deltaY * 0.05)
     plane.scale.x = Math.max(plane.scale.x, 1.0)
     plane.scale.y = plane.scale.x
 

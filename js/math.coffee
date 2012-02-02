@@ -3,7 +3,7 @@
 PI = 3.141592653589793
 
 # Pull these functions into our scope for convenience
-{ atan2, acos, sqrt, cos, sin, pow, min, max } = Math
+{ abs, atan2, acos, sqrt, cos, sin, pow, min, max } = Math
 
 # Convert spherical coordinates to cartesian coordinates
 sphericalToCartesian = (r, theta, phi) ->
