@@ -187,27 +187,13 @@ drawScene = (rti) ->
   animate(new Date().getTime())
 
 #### Entry point
+
 $ ->
-  progressText = $('#loading > span')
-  progressBar = $('progress')
-
-  updateProgressBar = (current, total) ->
-    completionPct = (current / total) * 100.0
-    progressBar.attr('value', completionPct)
-
   # Load the RTI file
   rtiFile = new BinaryFile('rti/coin.rti')
-  rtiFile.onProgress = (event) =>
-    if event.lengthComputable
-      updateProgressBar(event.loaded, event.total)
-
   rtiFile.load ->
-    progressText.text('Parsing RTI file:')
     rti = new RTI(new DataViewStream(rtiFile.dataStream))
-    rti.onParsing = (event) =>
-      updateProgressBar(event.parsed, event.total)
     #### Parse and draw the scene
     rti.parse ->
-      progressText.hide()
-      progressBar.hide()
+      $('.loading').removeClass('loading')
       drawScene(rti)

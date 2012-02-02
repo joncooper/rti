@@ -157,14 +157,17 @@ var RTI,
 
 RTI = (function() {
 
-  function RTI(dataStream) {
+  function RTI(dataStream, LOG) {
     this.dataStream = dataStream;
+    this.LOG = LOG != null ? LOG : false;
     this.parse = __bind(this.parse, this);
     this.onParsing = __bind(this.onParsing, this);
   }
 
   RTI.prototype.onParsing = function(event) {
-    return console.log("RTI parsed " + event.parsed + " of " + event.total);
+    if (this.LOG) {
+      return console.log("RTI parsed " + event.parsed + " of " + event.total);
+    }
   };
 
   RTI.prototype.parse = function(completionHandler) {
@@ -511,32 +514,17 @@ drawScene = function(rti) {
 };
 
 $(function() {
-  var progressBar, progressText, rtiFile, updateProgressBar,
-    _this = this;
-  progressText = $('#loading > span');
-  progressBar = $('progress');
-  updateProgressBar = function(current, total) {
-    var completionPct;
-    completionPct = (current / total) * 100.0;
-    return progressBar.attr('value', completionPct);
-  };
+  var rtiFile;
   rtiFile = new BinaryFile('rti/coin.rti');
-  rtiFile.onProgress = function(event) {
-    if (event.lengthComputable) {
-      return updateProgressBar(event.loaded, event.total);
-    }
-  };
   return rtiFile.load(function() {
-    var rti,
-      _this = this;
-    progressText.text('Parsing RTI file:');
+    var doNothing, rti;
     rti = new RTI(new DataViewStream(rtiFile.dataStream));
-    rti.onParsing = function(event) {
-      return updateProgressBar(event.parsed, event.total);
+    doNothing = function() {
+      return console.log('woo');
     };
+    setTimeout(doNothing, 100000000);
     return rti.parse(function() {
-      progressText.hide();
-      progressBar.hide();
+      $('.loading').removeClass('loading');
       return drawScene(rti);
     });
   });

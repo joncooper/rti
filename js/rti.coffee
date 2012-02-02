@@ -4,11 +4,11 @@
 class RTI
 
   # Takes a DataViewStream
-  constructor: (@dataStream) ->
+  constructor: (@dataStream, @LOG=false) ->
 
   # Fired periodically while parsing
   onParsing: (event) =>
-    console.log "RTI parsed #{event.parsed} of #{event.total}"
+    console.log "RTI parsed #{event.parsed} of #{event.total}" if @LOG
 
   parse: (completionHandler) =>
     @parseHSH()
