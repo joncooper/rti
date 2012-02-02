@@ -5,6 +5,7 @@ import:
 
 docco:
 	docco js/*coffee
+	rm docs/bundle.html
 
 clean:
 	rm -f js/*js
