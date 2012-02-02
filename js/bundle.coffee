@@ -3,5 +3,5 @@
 #import "dataviewstream.coffee"
 #import "assertions.coffee"
 #import "rti.coffee"
-#import "jquery.mousewheel.js"
+#import "extern/jquery.mousewheel.js"
 #import "rtiviewer.coffee"

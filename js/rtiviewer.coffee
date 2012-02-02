@@ -188,7 +188,7 @@ $ ->
     progressBar.attr('value', completionPct)
 
   # Load the RTI file
-  rtiFile = new jdc.BinaryFile('rti/coin.rti')
+  rtiFile = new BinaryFile('rti/coin.rti')
   rtiFile.onProgress = (event) =>
     if event.lengthComputable
       updateProgressBar(event.loaded, event.total)
