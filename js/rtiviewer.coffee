@@ -186,18 +186,27 @@ drawScene = (rti) ->
 
   animate(new Date().getTime())
 
-#### Entry point
+#### Load and display an RTI file
 
-$ ->
-  # Bind click handler
-  $('.source').click ->
-    window.location = "docs/rtiviewer.html"
+loadAndDisplay = (url) ->
+  $('#three > canvas').remove()
+  $('#three').addClass('loading')
 
-  # Load the RTI file
-  rtiFile = new BinaryFile('rti/coin.rti')
+  rtiFile = new BinaryFile(url)
   rtiFile.load ->
     rti = new RTI(new DataViewStream(rtiFile.dataStream))
     #### Parse and draw the scene
     rti.parse ->
-      $('.loading').removeClass('loading')
+      $('#three').removeClass('loading')
       drawScene(rti)
+
+#### Entry point
+
+$ ->
+  # Bind click handler
+  $('.rti-file-list a').click (e) ->
+    e.preventDefault()
+    loadAndDisplay($(e.target).attr('href'))
+
+  # Load initial RTI
+  loadAndDisplay('rti/coin.rti')

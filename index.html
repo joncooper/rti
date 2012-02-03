@@ -2,52 +2,25 @@
 <html>
   <head>
     <title>GLSL RTI Viewer</title>
+    <link href="assets/bootstrap/css/bootstrap.css" rel="stylesheet">
     <style>
       body {
-        margin: 0px;
-        padding: 0px;
         background: url(assets/little_pluses.png)
       }
-      header {
-        width: 100%;
-        height: 48px;
-        position: relative;
-        top: 0px;
-        background-color: black;
-        font-size: 36px;
-        color: white;
-      }
-      header span {
-        position: absolute;
-        padding-top: 5px;
-      }
-      header span.title {
-        left: 0px;
-        margin-left: 48px;
-      }
-      header span.source {
-        right: 0px;
-        margin-right: 48px;
-        cursor: pointer;
-      }
-      footer {
+      .navbar-fixed-bottom {
         position: fixed;
-        bottom: 0;
-        width: 100%;
-        height: 48px;
-        background-color: black;
+        bottom: 0px;
+        left: -10px;
+        right: -10px;
+        margin-top: 18px;
+        margin-bottom: 0px;
       }
-      footer p.instructions {
-        position: relative;
-        bottom: 14px;
-        font-size: 24px;
-        color: white;
+      .navbar-fixed-bottom .navbar-inner .container a {
+        float: none;
         text-align: center;
       }
       #three {
-        width: 100%;
         min-height: 400px;
-        position: absolute;
         margin-top: 84px;
       }
       #three.loading {
@@ -61,6 +34,7 @@
       }
     </style>
     <script src="js/extern/jquery.min.js"></script>
+    <script src="assets/bootstrap/js/bootstrap.min.js"></script>
     <script src="js/extern/rAF.js"></script>
     <script src="js/extern/Three.js"></script>
     <script src="js/rtiviewer.js"></script>
@@ -79,31 +53,54 @@
 </script>
 </head>
 
-</head>
 
   <body>
-    <header>
-      <span class="title">GLSL RTI Viewer</span>
-      <ul>
-  <li><a href="rti/coin.rti" data-filetype="rti">coin</a></li>
-  <li><a href="rti/cuniform.rti" data-filetype="rti">cuniform</a></li>
-  <li><a href="rti/dome_cat.rti" data-filetype="rti">dome_cat</a></li>
-  <li><a href="rti/dome_redbowl.rti" data-filetype="rti">dome_redbowl</a></li>
-  <li><a href="rti/dome_shells.rti" data-filetype="rti">dome_shells</a></li>
-  <li><a href="rti/dome_silverbox.rti" data-filetype="rti">dome_silverbox</a></li>
-  <li><a href="rti/vase.rti" data-filetype="rti">vase</a></li>
-  <li><a href="rti/vase_2ndorder.rti" data-filetype="rti">vase_2ndorder</a></li>
+    <div class="navbar navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container">
+          <a class="brand" href="#">GLSL RTI Viewer</a>
+          <div class="nav-collapse">
+<!--
+            <ul class="nav">
+              <li><a href="#about">About</a></li>
+              <li><a href="#source">Source</a></li>
+              <li><a href="#contact">Contact</a></li>
+            </ul>
+-->
+          </div><!--/.nav-collapse -->
+        <ul class="nav">
+<li class="dropdown">
+<a href="#" class="dropdown-toggle" data-toggle="dropdown">Files<b class="caret"></b></a>
+<ul class="dropdown-menu rti-file-list">
+<li><a href="rti/coin.rti" data-filetype="rti">coin</a></li>
+<li><a href="rti/cuniform.rti" data-filetype="rti">cuniform</a></li>
+<li><a href="rti/dome_cat.rti" data-filetype="rti">dome_cat</a></li>
+<li><a href="rti/dome_shells.rti" data-filetype="rti">dome_shells</a></li>
+<li><a href="rti/dome_silverbox.rti" data-filetype="rti">dome_silverbox</a></li>
+<li><a href="rti/vase.rti" data-filetype="rti">vase</a></li>
+</ul>
+</li>
 </ul>
 
-      <span class="source">Source</span>
-    </header>
-    <div id="three" class="loading">
+          <ul class="nav pull-right">
+            <li>
+              <a href="docs/rtiviewer.html">Source</a>
+            </li>
+          </ul>
+        </div><!-- .container -->
+      </div>
     </div>
-    <footer>
-      <p class="instructions">
-        Move mouse to relight - Wheel to zoom - Drag to pan
-      </p>
-    </footer>
+    <div class="container">
+      <div id="three" class="loading">
+      </div>
+    </div>
+    <div class="navbar navbar-fixed-bottom">
+      <div class="navbar-inner">
+        <div class="container">
+          <a class="brand" href="#">Move mouse to relight - Wheel to zoom - Drag to pan</a>
+        </div>
+      </div>
+    </div>
     <!-- <script>document.write('<script src="http://' + (location.host || 'localhost').split(':')[0] + ':35729/livereload.js?snipver=1"></' + 'script>')</script> -->
   </body>
 </html>

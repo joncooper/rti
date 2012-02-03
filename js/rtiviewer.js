@@ -384,7 +384,7 @@ function handler(event) {
 
 })(jQuery);
 
-var buildUniforms, drawScene, fragmentShader, vertexShader;
+var buildUniforms, drawScene, fragmentShader, loadAndDisplay, vertexShader;
 
 vertexShader = "\nvarying vec2 pos;\n\nvoid main() {\n  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);\n  pos = uv;\n}\n";
 
@@ -513,20 +513,27 @@ drawScene = function(rti) {
   return animate(new Date().getTime());
 };
 
-$(function() {
+loadAndDisplay = function(url) {
   var rtiFile;
-  $('.source').click(function() {
-    return window.location = "docs/rtiviewer.html";
-  });
-  rtiFile = new BinaryFile('rti/coin.rti');
+  $('#three > canvas').remove();
+  $('#three').addClass('loading');
+  rtiFile = new BinaryFile(url);
   return rtiFile.load(function() {
     var rti;
     rti = new RTI(new DataViewStream(rtiFile.dataStream));
     return rti.parse(function() {
-      $('.loading').removeClass('loading');
+      $('#three').removeClass('loading');
       return drawScene(rti);
     });
   });
+};
+
+$(function() {
+  $('.rti-file-list a').click(function(e) {
+    e.preventDefault();
+    return loadAndDisplay($(e.target).attr('href'));
+  });
+  return loadAndDisplay('rti/coin.rti');
 });
 
 
