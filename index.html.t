@@ -25,7 +25,7 @@
         left: 0px;
         margin-left: 48px;
       }
-      header span.source {
+      footer span.source {
         right: 0px;
         margin-right: 48px;
         cursor: pointer;
@@ -64,38 +64,13 @@
     <script src="js/extern/rAF.js"></script>
     <script src="js/extern/Three.js"></script>
     <script src="js/rtiviewer.js"></script>
-    <script type="text/javascript">
-
-  var _gaq = _gaq || [];
-  _gaq.push(['_setAccount', 'UA-28892801-1']);
-  _gaq.push(['_trackPageview']);
-
-  (function() {
-    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
-    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
-    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
-  })();
-
-</script>
-</head>
-
+    --GA--
 </head>
 
   <body>
     <header>
       <span class="title">GLSL RTI Viewer</span>
-      <ul>
-  <li><a href="rti/coin.rti" data-filetype="rti">coin</a></li>
-  <li><a href="rti/cuniform.rti" data-filetype="rti">cuniform</a></li>
-  <li><a href="rti/dome_cat.rti" data-filetype="rti">dome_cat</a></li>
-  <li><a href="rti/dome_redbowl.rti" data-filetype="rti">dome_redbowl</a></li>
-  <li><a href="rti/dome_shells.rti" data-filetype="rti">dome_shells</a></li>
-  <li><a href="rti/dome_silverbox.rti" data-filetype="rti">dome_silverbox</a></li>
-  <li><a href="rti/vase.rti" data-filetype="rti">vase</a></li>
-  <li><a href="rti/vase_2ndorder.rti" data-filetype="rti">vase_2ndorder</a></li>
-</ul>
-
-      <span class="source">Source</span>
+      --FILES--
     </header>
     <div id="three" class="loading">
     </div>
@@ -103,6 +78,7 @@
       <p class="instructions">
         Move mouse to relight - Wheel to zoom - Drag to pan
       </p>
+      <span class="source">Source</span>
     </footer>
     <!-- <script>document.write('<script src="http://' + (location.host || 'localhost').split(':')[0] + ':35729/livereload.js?snipver=1"></' + 'script>')</script> -->
   </body>
