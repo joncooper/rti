@@ -57,6 +57,9 @@
         --FILES--
           <ul class="nav pull-right">
             <li>
+              <a href="http://www.hpl.hp.com/research/ptm/papers/ptm.pdf">The Paper</a>
+            </li>
+            <li>
               <a href="docs/rtiviewer.html">Source</a>
             </li>
           </ul>
