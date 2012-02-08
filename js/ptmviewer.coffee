@@ -1,13 +1,3 @@
-# Load, parse and display the RTI file
-#
-# * Click and drag to pan
-# * Scroll wheel to zoom
-# * Move the mouse to relight
-
-# The vertex shader (GLSL):
-#
-# * projects the geometry onto the view
-# * passes on the texture coordinates as the varying vec2 pos
 vertexShader = """
 
 varying vec2 pos;
@@ -210,5 +200,26 @@ loadAndDisplay = (url) ->
 
 #   # Load initial RTI
 #   loadAndDisplay('rti/coin.rti')
-#p
 #
+
+$ ->
+  ptmFile = new BinaryFile('rti/ak44a.ptm')
+  ptmFile.load ->
+    ptm = new PTM(new DataViewStream(ptmFile.dataStream))
+    ptm.parse ->
+      $('#three').append('<canvas></canvas>')
+      canvas = $('#three > canvas')[0]
+      canvas.width = ptm.width
+      canvas.height = ptm.height
+      context = canvas.getContext('2d')
+      pixelData = context.createImageData(ptm.width, ptm.height)
+      for y in [0...2000]
+        for x in [0...3008]
+          i = y * 3008 * 4 + x * 4
+          j = y * 3008 * 3 + x * 3
+          console.log ptm.tex2[j], ptm.tex2[j+1], ptm.tex2[j+2]
+          pixelData.data[i]   = ptm.tex2[j]
+          pixelData.data[i+1] = ptm.tex2[j+1]
+          pixelData.data[i+2] = ptm.tex2[j+2]
+          pixelData.data[i+3] = 255
+      context.putImageData(pixelData, 0, 0)

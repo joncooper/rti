@@ -146,10 +146,14 @@ DataViewStream = (function() {
 
 })();
 
-var assertEqual;
+var assert, assertEqual;
 
 assertEqual = function(tested, expected, errorMessage) {
   if (tested !== expected) throw "Failed assertion: " + errorMessage;
+};
+
+assert = function(testBoolean, errorMessage) {
+  if (!testBoolean) throw "Failed assertion: " + errorMessage;
 };
 
 var RTI,
@@ -298,6 +302,129 @@ RTI = (function() {
   return RTI;
 
 })();
+
+var PTM;
+
+String.prototype.strip = function() {
+  return this.replace(/\s+$/g, "");
+};
+
+PTM = (function() {
+
+  function PTM(dataStream, LOG) {
+    this.dataStream = dataStream;
+    this.LOG = LOG != null ? LOG : false;
+  }
+
+  PTM.prototype.parse = function(completionHandler) {
+    this.parsePTM();
+    return completionHandler();
+  };
+
+  PTM.prototype.parsePTM = function() {
+    var a0, a1, a2, a3, a4, a5, b, g, i, offset, r, s, tmp, x, y, _ref, _ref2, _ref3, _results;
+    this.headerString = this.dataStream.readLine().strip();
+    assertEqual(this.headerString, 'PTM_1.2', 'Cannot parse as PTM');
+    this.formatString = this.dataStream.readLine().strip();
+    assertEqual(this.formatString, 'PTM_FORMAT_LRGB', 'Cannot parse non-LRGB');
+    _ref = this.dataStream.readLine().strip().split(" "), this.width = _ref[0], this.height = _ref[1];
+    if (this.height == null) this.height = this.dataStream.readLine().strip();
+    tmp = this.dataStream.readLine().strip().split(" ");
+    assert(tmp.length === 6 || tmp.length === 12, "Cannot parse scale/bias block");
+    if (tmp.length === 6) {
+      this.scale = [
+        (function() {
+          var _i, _len, _results;
+          _results = [];
+          for (_i = 0, _len = tmp.length; _i < _len; _i++) {
+            s = tmp[_i];
+            _results.push(Number(s));
+          }
+          return _results;
+        })()
+      ];
+      this.bias = [
+        (function() {
+          var _i, _len, _ref2, _results;
+          _ref2 = this.dataStream.readLine().strip().split(" ");
+          _results = [];
+          for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
+            b = _ref2[_i];
+            _results.push(Number(b));
+          }
+          return _results;
+        }).call(this)
+      ];
+    } else {
+      _ref2 = [
+        [
+          (function() {
+            var _i, _len, _ref2, _results;
+            _ref2 = tmp.slice(0, 6);
+            _results = [];
+            for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
+              s = _ref2[_i];
+              _results.push(Number(s));
+            }
+            return _results;
+          })()
+        ], [
+          (function() {
+            var _i, _len, _ref2, _results;
+            _ref2 = tmp.slice(6, 12);
+            _results = [];
+            for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
+              b = _ref2[_i];
+              _results.push(Number(b));
+            }
+            return _results;
+          })()
+        ]
+      ], this.scale = _ref2[0], this.bias = _ref2[1];
+    }
+    console.log("Height: " + this.height);
+    console.log("Width:  " + this.width);
+    console.log("Scale:  " + this.scale);
+    console.log("Bias:   " + this.bias);
+    this.tex0 = new Uint8Array(this.height * this.width * 3);
+    this.tex1 = new Uint8Array(this.height * this.width * 3);
+    this.tex2 = new Uint8Array(this.height * this.width * 3);
+    this.terms = 9;
+    _results = [];
+    for (y = 0, _ref3 = this.height; 0 <= _ref3 ? y < _ref3 : y > _ref3; 0 <= _ref3 ? y++ : y--) {
+      _results.push((function() {
+        var _ref4, _ref5, _ref6, _ref7, _ref8, _results2;
+        _results2 = [];
+        for (x = 0, _ref4 = this.width; 0 <= _ref4 ? x < _ref4 : x > _ref4; 0 <= _ref4 ? x++ : x--) {
+          offset = (y * this.width * this.terms) + (x * this.terms);
+          _ref5 = [
+            (function() {
+              var _ref5, _results3;
+              _results3 = [];
+              for (i = 0, _ref5 = this.terms; 0 <= _ref5 ? i < _ref5 : i > _ref5; 0 <= _ref5 ? i++ : i--) {
+                _results3.push(this.dataStream.readUint8());
+              }
+              return _results3;
+            }).call(this)
+          ], a0 = _ref5[0], a1 = _ref5[1], a2 = _ref5[2], a3 = _ref5[3], a4 = _ref5[4], a5 = _ref5[5], r = _ref5[6], g = _ref5[7], b = _ref5[8];
+          _ref6 = [a0, a1, a2], this.tex0[offset] = _ref6[0], this.tex0[offset + 1] = _ref6[1], this.tex0[offset + 2] = _ref6[2];
+          _ref7 = [a3, a4, a5], this.tex1[offset] = _ref7[0], this.tex1[offset + 1] = _ref7[1], this.tex1[offset + 2] = _ref7[2];
+          _ref8 = [r, g, b], this.tex2[offset] = _ref8[0], this.tex2[offset + 1] = _ref8[1], this.tex2[offset + 2] = _ref8[2];
+          _results2.push((function() {
+            debugger;
+          })());
+        }
+        return _results2;
+      }).call(this));
+    }
+    return _results;
+  };
+
+  return PTM;
+
+})();
+
+window.PTM = PTM;
 
 /*! Copyright (c) 2011 Brandon Aaron (http://brandonaaron.net)
  * Licensed under the MIT License (LICENSE.txt).
@@ -528,12 +655,178 @@ loadAndDisplay = function(url) {
   });
 };
 
-$(function() {
-  $('.rti-file-list a').click(function(e) {
-    e.preventDefault();
-    return loadAndDisplay($(e.target).attr('href'));
+var buildUniforms, drawScene, fragmentShader, loadAndDisplay, vertexShader;
+
+vertexShader = "\nvarying vec2 pos;\n\nvoid main() {\n  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);\n  pos = uv;\n}\n";
+
+fragmentShader = "\nvarying vec2 pos;\n\nuniform float scale[9];\nuniform float bias[9];\nuniform float weights[9];\n\nuniform sampler2D rtiData[9];\n\nvoid main() {\n\n  gl_FragColor  = (texture2D(rtiData[0], pos) * scale[0] + bias[0]) * weights[0];\n  gl_FragColor += (texture2D(rtiData[1], pos) * scale[1] + bias[1]) * weights[1];\n  gl_FragColor += (texture2D(rtiData[2], pos) * scale[2] + bias[2]) * weights[2];\n  gl_FragColor += (texture2D(rtiData[3], pos) * scale[3] + bias[3]) * weights[3];\n  gl_FragColor += (texture2D(rtiData[4], pos) * scale[4] + bias[4]) * weights[4];\n  gl_FragColor += (texture2D(rtiData[5], pos) * scale[5] + bias[5]) * weights[5];\n  gl_FragColor += (texture2D(rtiData[6], pos) * scale[6] + bias[6]) * weights[6];\n  gl_FragColor += (texture2D(rtiData[7], pos) * scale[7] + bias[7]) * weights[7];\n  gl_FragColor += (texture2D(rtiData[8], pos) * scale[8] + bias[8]) * weights[8];\n  gl_FragColor.a = 1.0;\n\n}\n";
+
+buildUniforms = function(rti, theta, phi) {
+  var i, makeTexture, textures, uniforms, weights,
+    _this = this;
+  textures = rti.makeTextures();
+  weights = rti.computeWeights(theta, phi);
+  makeTexture = function(i) {
+    var t;
+    t = new THREE.DataTexture(textures[i], rti.width, rti.height, THREE.RGBFormat);
+    t.needsUpdate = true;
+    return t;
+  };
+  uniforms = {
+    bias: {
+      type: 'fv1',
+      value: rti.bias
+    },
+    scale: {
+      type: 'fv1',
+      value: rti.scale
+    },
+    weights: {
+      type: 'fv1',
+      value: weights
+    },
+    rtiData: {
+      type: 'tv',
+      value: 0,
+      texture: (function() {
+        var _results;
+        _results = [];
+        for (i = 0; i < 9; i++) {
+          _results.push(makeTexture(i));
+        }
+        return _results;
+      })()
+    }
+  };
+  return uniforms;
+};
+
+drawScene = function(rti) {
+  var animate, camera, canvas, centerCanvasPoint, moveHandler, panHandler, plane, renderer, scene, uniforms, zoomHandler,
+    _this = this;
+  renderer = new THREE.WebGLRenderer();
+  renderer.setSize(rti.width, rti.height);
+  $('#three').append(renderer.domElement);
+  renderer.setClearColorHex(0x555555, 1.0);
+  renderer.clear();
+  canvas = $('#three > canvas')[0];
+  scene = new THREE.Scene();
+  camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100.0);
+  camera.position.z = 100.0;
+  scene.add(camera);
+  uniforms = buildUniforms(rti, 0.0, PI);
+  this.material = new THREE.ShaderMaterial({
+    uniforms: uniforms,
+    fragmentShader: fragmentShader,
+    vertexShader: vertexShader
   });
-  return loadAndDisplay('rti/coin.rti');
+  plane = new THREE.Mesh(new THREE.PlaneGeometry(2.0, 2.0, 1, 1), this.material);
+  scene.add(plane);
+  scene.add(camera);
+  centerCanvasPoint = function(x, y) {
+    x -= canvas.width / 2;
+    y *= -1;
+    y += canvas.height / 2;
+    return [x, y];
+  };
+  moveHandler = function(event) {
+    var lx, ly, lz, min_axis, phi, r, sphericalC, x, y, _ref;
+    if (_this.dragging) return;
+    _ref = centerCanvasPoint(event.offsetX, event.offsetY), x = _ref[0], y = _ref[1];
+    min_axis = Math.min(canvas.width, canvas.height) / 2;
+    phi = Math.atan2(y, x);
+    r = Math.min(Math.sqrt(x * x + y * y), min_axis - 50) / min_axis;
+    lx = r * Math.cos(phi);
+    ly = r * Math.sin(phi);
+    lz = Math.sqrt(1.0 * 1.0 - (lx * lx) - (ly * ly));
+    sphericalC = cartesianToSpherical(lx, ly, lz);
+    return _this.material.uniforms.weights.value = rti.computeWeights(sphericalC.theta, sphericalC.phi);
+  };
+  panHandler = function(event) {
+    var deltaX, deltaY;
+    deltaX = event.offsetX - this.dragStart.x;
+    deltaY = event.offsetY - this.dragStart.y;
+    plane.position.x = planeStart.x + ((deltaX / (canvas.width * plane.scale.x)) * (2.0 * plane.scale.x));
+    return plane.position.y = planeStart.y + ((-deltaY / (canvas.height * plane.scale.y)) * (2.0 * plane.scale.y));
+  };
+  $(canvas).mousedown(function(event) {
+    _this.dragging = true;
+    _this.dragStart = {
+      x: event.offsetX,
+      y: event.offsetY
+    };
+    return _this.planeStart = {
+      x: plane.position.x,
+      y: plane.position.y
+    };
+  });
+  $(canvas).mousemove(function(event) {
+    if (!_this.dragging) return;
+    return panHandler(event);
+  });
+  $(canvas).mouseup(function(event) {
+    return _this.dragging = false;
+  });
+  zoomHandler = function(deltaY) {
+    plane.scale.x += deltaY * 0.05;
+    plane.scale.x = Math.max(plane.scale.x, 1.0);
+    return plane.scale.y = plane.scale.x;
+  };
+  $('#three > canvas').mousemove(moveHandler);
+  $('#three > canvas').mousewheel(function(event, delta, deltaX, deltaY) {
+    return zoomHandler(deltaY);
+  });
+  animate = function(t) {
+    camera.lookAt(scene.position);
+    renderer.render(scene, camera);
+    return window.requestAnimationFrame(animate, renderer.domElement);
+  };
+  return animate(new Date().getTime());
+};
+
+loadAndDisplay = function(url) {
+  var rtiFile;
+  $('#three > canvas').remove();
+  $('#three').addClass('loading');
+  rtiFile = new BinaryFile(url);
+  return rtiFile.load(function() {
+    var rti;
+    rti = new RTI(new DataViewStream(rtiFile.dataStream));
+    return rti.parse(function() {
+      $('#three').removeClass('loading');
+      return drawScene(rti);
+    });
+  });
+};
+
+$(function() {
+  var ptmFile;
+  ptmFile = new BinaryFile('rti/ak44a.ptm');
+  return ptmFile.load(function() {
+    var ptm;
+    ptm = new PTM(new DataViewStream(ptmFile.dataStream));
+    return ptm.parse(function() {
+      var canvas, context, i, j, pixelData, x, y;
+      $('#three').append('<canvas></canvas>');
+      canvas = $('#three > canvas')[0];
+      canvas.width = ptm.width;
+      canvas.height = ptm.height;
+      context = canvas.getContext('2d');
+      pixelData = context.createImageData(ptm.width, ptm.height);
+      for (y = 0; y < 2000; y++) {
+        for (x = 0; x < 3008; x++) {
+          i = y * 3008 * 4 + x * 4;
+          j = y * 3008 * 3 + x * 3;
+          console.log(ptm.tex2[j], ptm.tex2[j + 1], ptm.tex2[j + 2]);
+          pixelData.data[i] = ptm.tex2[j];
+          pixelData.data[i + 1] = ptm.tex2[j + 1];
+          pixelData.data[i + 2] = ptm.tex2[j + 2];
+          pixelData.data[i + 3] = 255;
+        }
+      }
+      return context.putImageData(pixelData, 0, 0);
+    });
+  });
 });
 
 
