@@ -1,5 +1,8 @@
 # A stream wrapper for DataView
 
+# TODO: this probably should take an ArrayBuffer rather than a DataView in the constructor,
+# so that it can be sliced.
+
 class DataViewStream
 
   # Takes a DataView, which provides a wrapper around ArrayBuffer to provide various unpacking options

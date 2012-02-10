@@ -9,82 +9,73 @@ void main() {
 
 """
 
-# The fragment shader (GLSL) calculates each pixel's intensity by:
-#
-# * Sampling the coefficient from the texture array (which coerces it to a float)
-# * Rehydrating it by applying the scale and bias
-# * Multiplying it by the appropriate polynomial term weight
-# * Summing those weighted, rehydrated coefficients
 fragmentShader = """
 
 varying vec2 pos;
 
-uniform float scale[9];
-uniform float bias[9];
-uniform float weights[9];
-
-uniform sampler2D rtiData[9];
+uniform float Lu;
+uniform float Lv;
+uniform sampler2D luminanceCoefficients012;
+uniform sampler2D luminanceCoefficients345;
+uniform sampler2D chrominance;
 
 void main() {
+  vec4 a0a1a2 = texture2D(luminanceCoefficients012, pos);
+  vec4 a3a4a5 = texture2D(luminanceCoefficients345, pos);
 
-  gl_FragColor  = (texture2D(rtiData[0], pos) * scale[0] + bias[0]) * weights[0];
-  gl_FragColor += (texture2D(rtiData[1], pos) * scale[1] + bias[1]) * weights[1];
-  gl_FragColor += (texture2D(rtiData[2], pos) * scale[2] + bias[2]) * weights[2];
-  gl_FragColor += (texture2D(rtiData[3], pos) * scale[3] + bias[3]) * weights[3];
-  gl_FragColor += (texture2D(rtiData[4], pos) * scale[4] + bias[4]) * weights[4];
-  gl_FragColor += (texture2D(rtiData[5], pos) * scale[5] + bias[5]) * weights[5];
-  gl_FragColor += (texture2D(rtiData[6], pos) * scale[6] + bias[6]) * weights[6];
-  gl_FragColor += (texture2D(rtiData[7], pos) * scale[7] + bias[7]) * weights[7];
-  gl_FragColor += (texture2D(rtiData[8], pos) * scale[8] + bias[8]) * weights[8];
+// intensity = (a0 * Lu^2) + (a1 * Lv^2) + (a2 * Lu * Lv) + (a3 * Lu) + (a4 * Lv) + a5;
+
+  float intensity = dot(a0a1a2, vec4(Lu*Lu, Lv*Lv, Lu*Lv, 0.0)) + dot(a3a4a5, vec4(Lu, Lv, 1.0, 0.0));
+  vec4 rgb = texture2D(chrominance, pos);
+
+//  gl_FragColor = rgb;
+  gl_FragColor.r = intensity * rgb.r;
+  gl_FragColor.g = intensity * rgb.g;
+  gl_FragColor.b = intensity * rgb.b;
   gl_FragColor.a = 1.0;
-
 }
 
 """
 
 # Build the set of uniforms that will be passed to the shaders
-#
-# * texture array (rtiData)
-# * bias
-# * scale
-# * weights
-buildUniforms = (rti, theta, phi) ->
 
-  # Pack coefficients for each term into an array of RGB tuples in a Uint8Array
-  textures = rti.makeTextures()
-  # Generate the initial weights given light coordinates
-  weights = rti.computeWeights(theta, phi)
+buildUniforms = (ptm) ->
+  lightCoordinates = { u: 0.1, v: 0.1 }
 
   # Turn a raw texture buffer into a THREE (and GL) texture, and push it to the GPU
-  makeTexture = (i) =>
-    t = new THREE.DataTexture(textures[i], rti.width, rti.height, THREE.RGBFormat)
+  makeTexture = (uint8textureData) =>
+    t = new THREE.DataTexture(uint8textureData, ptm.width, ptm.height, THREE.RGBFormat)
     t.needsUpdate = true
     return t
 
-  # Build the initial set of uniforms for our shader
   uniforms =
-    bias:
-      type: 'fv1'
-      value: rti.bias
-    scale:
-      type: 'fv1'
-      value: rti.scale
-    weights:
-      type: 'fv1'
-      value: weights
-    rtiData:
-      type: 'tv'
+    Lu:
+      type: 'f'
+      value: lightCoordinates.u
+    Lv:
+      type: 'f'
+      value: lightCoordinates.v
+    luminanceCoefficients012:
+      type: 't'
       value: 0
-      texture: (makeTexture(i) for i in [0...9])
+      texture: makeTexture(ptm.tex0)
+    luminanceCoefficients345:
+      type: 't'
+      value: 1
+      texture: makeTexture(ptm.tex1)
+    chrominance:
+      type: 't'
+      value: 2
+      texture: makeTexture(ptm.tex2)
 
   return uniforms
 
 #### Draw the scene and attach mouse handlers
-drawScene = (rti) ->
+drawScene = (ptm) ->
 
   # Attach the renderer
   renderer = new THREE.WebGLRenderer()
-  renderer.setSize(rti.width, rti.height)
+  renderer.setSize(ptm.width, ptm.height)
   $('#three').append(renderer.domElement)
   renderer.setClearColorHex(0x555555, 1.0)
   renderer.clear()
@@ -97,7 +88,7 @@ drawScene = (rti) ->
   scene.add(camera)
 
   # Bind the uniforms and shaders to the plane we'll use for display
-  uniforms = buildUniforms(rti, 0.0, PI)
+  uniforms = buildUniforms(ptm)
   @material = new THREE.ShaderMaterial(
     uniforms: uniforms
     fragmentShader: fragmentShader
@@ -112,61 +103,6 @@ drawScene = (rti) ->
   # Complete building the scene
   scene.add(plane)
   scene.add(camera)
-
-  # Map (x,y) on the canvas from space [(0, width), (0, height)] -> [(-width/2, width/2), (height/2, -height/2)]
-  centerCanvasPoint = (x, y) ->
-    x -= canvas.width / 2
-    y *= -1
-    y += canvas.height / 2
-    return [x, y]
-
-  #### Bind mouse handlers
-
-  # Mouse move handler - relight based upon mouse position
-  moveHandler = (event) =>
-    return if @dragging
-    [x, y] = centerCanvasPoint(event.offsetX, event.offsetY)
-
-    # Clamp light position (TODO: better to clamp theta?)
-    min_axis = Math.min(canvas.width, canvas.height) / 2
-
-    phi   = Math.atan2(y, x)
-    r     = Math.min(Math.sqrt(x*x + y*y), min_axis - 50) / min_axis
-    lx    = r * Math.cos(phi)
-    ly    = r * Math.sin(phi)
-    lz    = Math.sqrt(1.0*1.0 - (lx*lx) - (ly*ly))
-    sphericalC = cartesianToSpherical(lx, ly, lz)
-
-    @material.uniforms.weights.value = rti.computeWeights(sphericalC.theta, sphericalC.phi)
-
-  # Drag handler - pan
-  panHandler = (event) ->
-    deltaX = event.offsetX - @dragStart.x
-    deltaY = event.offsetY - @dragStart.y
-    plane.position.x = planeStart.x + ((deltaX / (canvas.width * plane.scale.x)) * (2.0 * plane.scale.x))
-    plane.position.y = planeStart.y + ((-deltaY / (canvas.height * plane.scale.y)) * (2.0 * plane.scale.y))
-
-  $(canvas).mousedown (event) =>
-    @dragging = true
-    @dragStart = {x: event.offsetX, y: event.offsetY}
-    @planeStart = {x: plane.position.x, y: plane.position.y}
-
-  $(canvas).mousemove (event) =>
-    return unless @dragging
-    panHandler(event)
-
-  $(canvas).mouseup (event) =>
-    @dragging = false
-
-  # Zoom handler - zoom in/out
-  zoomHandler = (deltaY) ->
-    plane.scale.x += (deltaY * 0.05)
-    plane.scale.x = Math.max(plane.scale.x, 1.0)
-    plane.scale.y = plane.scale.x
-
-  $('#three > canvas').mousemove(moveHandler)
-  $('#three > canvas').mousewheel (event, delta, deltaX, deltaY) =>
-    zoomHandler(deltaY)
 
   # Fired every animation tick
   animate = (t) ->
@@ -190,36 +126,32 @@ loadAndDisplay = (url) ->
       $('#three').removeClass('loading')
       drawScene(rti)
 
+window.setL = (lu, lv) ->
+  @material.uniforms.Lu.value = lu
+  @material.uniforms.Lv.value = lv
+
 #### Entry point
 
-# $ ->
-#   # Bind click handler
-#   $('.rti-file-list a').click (e) ->
-#     e.preventDefault()
-#     loadAndDisplay($(e.target).attr('href'))
-
-#   # Load initial RTI
-#   loadAndDisplay('rti/coin.rti')
-#
+drawChrominanceData = (ptm) ->
+  $('#three').append('<canvas></canvas>')
+  canvas = $('#three > canvas')[0]
+  canvas.width = ptm.width
+  canvas.height = ptm.height
+  context = canvas.getContext('2d')
+  pixelData = context.createImageData(ptm.width, ptm.height)
+  for y in [0...ptm.height]
+    for x in [0...ptm.width]
+      i = (((ptm.height - 1) - y) * ptm.width * 4) + (x * 4)
+      j = (y * ptm.width * 3) + (x * 3)
+      pixelData.data[i]   = ptm.tex2[j]
+      pixelData.data[i+1] = ptm.tex2[j+1]
+      pixelData.data[i+2] = ptm.tex2[j+2]
+      pixelData.data[i+3] = 255
+  context.putImageData(pixelData, 0, 0)
 
 $ ->
-  ptmFile = new BinaryFile('rti/ak44a.ptm')
+  ptmFile = new BinaryFile('rti/WLR-tbird-no-distortion_1000.ptm')
   ptmFile.load ->
     ptm = new PTM(new DataViewStream(ptmFile.dataStream))
     ptm.parse ->
-      $('#three').append('<canvas></canvas>')
-      canvas = $('#three > canvas')[0]
-      canvas.width = ptm.width
-      canvas.height = ptm.height
-      context = canvas.getContext('2d')
-      pixelData = context.createImageData(ptm.width, ptm.height)
-      for y in [0...2000]
-        for x in [0...3008]
-          i = y * 3008 * 4 + x * 4
-          j = y * 3008 * 3 + x * 3
-          console.log ptm.tex2[j], ptm.tex2[j+1], ptm.tex2[j+2]
-          pixelData.data[i]   = ptm.tex2[j]
-          pixelData.data[i+1] = ptm.tex2[j+1]
-          pixelData.data[i+2] = ptm.tex2[j+2]
-          pixelData.data[i+3] = 255
-      context.putImageData(pixelData, 0, 0)
+      drawScene(ptm)

@@ -36,7 +36,6 @@
     <script src="js/extern/jquery.min.js"></script>
     <script src="assets/bootstrap/js/bootstrap.min.js"></script>
     <script src="js/extern/rAF.js"></script>
-    <script src="js/extern/Three.js"></script>
     <script src="js/rtiviewer.js"></script>
     --GA--
 

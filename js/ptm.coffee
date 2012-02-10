@@ -5,7 +5,7 @@ class PTM
 
   constructor: (@dataStream, @LOG=false) ->
 
-  parse: (completionHandler) ->
+  parse: (completionHandler) =>
     @parsePTM()
     completionHandler()
 
@@ -27,6 +27,9 @@ class PTM
     [@width, @height] = @dataStream.readLine().strip().split(" ")
     @height ?= @dataStream.readLine().strip()
 
+    @width = Number(@width)
+    @height = Number(@height)
+
     # Read 6 scale values (ASCII representation of "floating point")
     # "A newline can be used between the scale values and the bias values"
     # Read 6 bias values (ASCII respresentation of "integer")
@@ -37,33 +40,51 @@ class PTM
     assert(tmp.length == 6 or tmp.length == 12, "Cannot parse scale/bias block")
 
     if tmp.length is 6
-      @scale = [Number(s) for s in tmp]
-      @bias  = [Number(b) for b in @dataStream.readLine().strip().split(" ")]
+      @scale = (Number(s) for s in tmp)
+      @bias  = (Number(b) for b in @dataStream.readLine().strip().split(" "))
     else
-      [@scale, @bias] = [[Number(s) for s in tmp[0...6]], [Number(b) for b in tmp[6...12]]]
+      [@scale, @bias] = [(Number(s) for s in tmp[0...6]), (Number(b) for b in tmp[6...12])]
 
     console.log "Height: #{@height}"
     console.log "Width:  #{@width}"
     console.log "Scale:  #{@scale}"
     console.log "Bias:   #{@bias}"
 
+    # 49 48 52 32 50 52
+    #
+    # 4  2  4  2  2  4
+    # 104 234 74 86 82 0
+
     # PTM_FORMAT_LRGB data block
-    # Block format is [a0, a1, a2, a3, a4, a5, r, g, b] (uint8)
+    # PTM_1.1 block format is [a0, a1, a2, a3, a4, a5, r, g, b]{width * height} (uint8)
+    # PTM_1.2 block format is [a0, a1, a2, a3, a4, a5]{width * height}[r,g,b]{width * height} (uint8)
     # Where a0...5 are polynomial coefficients for the luminance polynomial and rgb are color values
     # These are stored in reverse-scanline order, which I interpret to mean from bottom left to bottom right, then up LTR
 
     @tex0 = new Uint8Array(@height * @width * 3)
     @tex1 = new Uint8Array(@height * @width * 3)
     @tex2 = new Uint8Array(@height * @width * 3)
-    @terms = 9
+
+    # Read coefficients, and 'rehydrate' each one by applying the transformation:
+    #    coefficient = (raw_coefficient - bias) * scale
+    # The 'rehydrated' coefficient is clamped into [0, 255].
 
     for y in [0...@height]
       for x in [0...@width]
-        offset = (y * @width * @terms) + (x * @terms)
-        [a0, a1, a2, a3, a4, a5, r, g, b] = [@dataStream.readUint8() for i in [0...@terms]]
-        [@tex0[offset], @tex0[offset+1], @tex0[offset+2]] = [a0, a1, a2]
-        [@tex1[offset], @tex1[offset+1], @tex1[offset+2]] = [a3, a4, a5]
-        [@tex2[offset], @tex2[offset+1], @tex2[offset+2]] = [ r,  g,  b]
-        debugger
+        offset = ((@height - 1 - y) * @width * 3) + (x * 3)
+        @tex0[offset]   = clampUint8((@dataStream.readUint8() - @bias[0]) * @scale[0]) # a0
+        @tex0[offset+1] = clampUint8((@dataStream.readUint8() - @bias[1]) * @scale[1]) # a1
+        @tex0[offset+2] = clampUint8((@dataStream.readUint8() - @bias[2]) * @scale[2]) # a2
+        @tex1[offset]   = clampUint8((@dataStream.readUint8() - @bias[3]) * @scale[3]) # a3
+        @tex1[offset+1] = clampUint8((@dataStream.readUint8() - @bias[4]) * @scale[4]) # a4
+        @tex1[offset+2] = clampUint8((@dataStream.readUint8() - @bias[5]) * @scale[5]) # a5
+        if ((y % 100) is 0) and (x is 500)
+          console.log @tex0[offset], @tex0[offset+1], @tex0[offset+2]
+          console.log @tex1[offset], @tex1[offset+1], @tex1[offset+2]
 
-window.PTM = PTM
+    for y in [0...@height]
+      for x in [0...@width]
+        offset = ((@height - 1 - y) * @width * 3) + (x * 3)
+        @tex2[offset]   = @dataStream.readUint8() # r
+        @tex2[offset+1] = @dataStream.readUint8() # g
+        @tex2[offset+2] = @dataStream.readUint8() # b
