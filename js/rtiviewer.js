@@ -888,7 +888,8 @@ PTM = (function() {
   };
 
   PTM.prototype.parsePTM = function() {
-    var b, offset, s, tmp, x, y, _ref, _ref2, _ref3, _ref4, _ref5, _results;
+    var b, finalize, offset, s, tmp, x, y, _ref, _ref2, _ref3, _ref4, _ref5, _results,
+      _this = this;
     this.headerString = this.dataStream.readLine().strip();
     assertEqual(this.headerString, 'PTM_1.2', 'Cannot parse as PTM');
     this.formatString = this.dataStream.readLine().strip();
@@ -949,15 +950,23 @@ PTM = (function() {
     this.tex0 = new Uint8Array(this.height * this.width * 3);
     this.tex1 = new Uint8Array(this.height * this.width * 3);
     this.tex2 = new Uint8Array(this.height * this.width * 3);
+    finalize = function(i) {
+      var c, sbs;
+      c = _this.dataStream.readUint8();
+      b = _this.bias[i];
+      s = _this.scale[i];
+      sbs = clampUint8((c * s) - b);
+      return sbs;
+    };
     for (y = 0, _ref3 = this.height; 0 <= _ref3 ? y < _ref3 : y > _ref3; 0 <= _ref3 ? y++ : y--) {
       for (x = 0, _ref4 = this.width; 0 <= _ref4 ? x < _ref4 : x > _ref4; 0 <= _ref4 ? x++ : x--) {
         offset = ((this.height - 1 - y) * this.width * 3) + (x * 3);
-        this.tex0[offset] = clampUint8((this.dataStream.readUint8() - this.bias[0]) * this.scale[0]);
-        this.tex0[offset + 1] = clampUint8((this.dataStream.readUint8() - this.bias[1]) * this.scale[1]);
-        this.tex0[offset + 2] = clampUint8((this.dataStream.readUint8() - this.bias[2]) * this.scale[2]);
-        this.tex1[offset] = clampUint8((this.dataStream.readUint8() - this.bias[3]) * this.scale[3]);
-        this.tex1[offset + 1] = clampUint8((this.dataStream.readUint8() - this.bias[4]) * this.scale[4]);
-        this.tex1[offset + 2] = clampUint8((this.dataStream.readUint8() - this.bias[5]) * this.scale[5]);
+        this.tex0[offset] = finalize(0);
+        this.tex0[offset + 1] = finalize(1);
+        this.tex0[offset + 2] = finalize(2);
+        this.tex1[offset] = finalize(3);
+        this.tex1[offset + 1] = finalize(4);
+        this.tex1[offset + 2] = finalize(5);
         if (((y % 100) === 0) && (x === 500)) {
           console.log(this.tex0[offset], this.tex0[offset + 1], this.tex0[offset + 2]);
           console.log(this.tex1[offset], this.tex1[offset + 1], this.tex1[offset + 2]);
@@ -1074,7 +1083,7 @@ var buildUniforms, drawChrominanceData, drawScene, fragmentShader, loadAndDispla
 
 vertexShader = "\nvarying vec2 pos;\n\nvoid main() {\n  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);\n  pos = uv;\n}\n";
 
-fragmentShader = "\nvarying vec2 pos;\n\nuniform float Lu;\nuniform float Lv;\nuniform sampler2D luminanceCoefficients012;\nuniform sampler2D luminanceCoefficients345;\nuniform sampler2D chrominance;\n\nvoid main() {\n  vec4 a0a1a2 = texture2D(luminanceCoefficients012, pos);\n  vec4 a3a4a5 = texture2D(luminanceCoefficients345, pos);\n\n// intensity = (a0 * Lu^2) + (a1 * Lv^2) + (a2 * Lu * Lv) + (a3 * Lu) + (a4 * Lv) + a5;\n\n  float intensity = dot(a0a1a2, vec4(Lu*Lu, Lv*Lv, Lu*Lv, 0.0)) + dot(a3a4a5, vec4(Lu, Lv, 1.0, 0.0));\n  vec4 rgb = texture2D(chrominance, pos);\n\n//  gl_FragColor = rgb;\n  gl_FragColor.r = intensity * rgb.r;\n  gl_FragColor.g = intensity * rgb.g;\n  gl_FragColor.b = intensity * rgb.b;\n  gl_FragColor.a = 1.0;\n}\n";
+fragmentShader = "\nvarying vec2 pos;\n\nuniform float Lu;\nuniform float Lv;\nuniform sampler2D luminanceCoefficients012;\nuniform sampler2D luminanceCoefficients345;\nuniform sampler2D chrominance;\n\nvoid main() {\n  vec4 a0a1a2 = texture2D(luminanceCoefficients012, pos);\n  vec4 a3a4a5 = texture2D(luminanceCoefficients345, pos);\n//  vec4 debug = vec4(pos.x, pos.y, 0.0, 1.0);\n\n// intensity = (a0 * Lu^2) + (a1 * Lv^2) + (a2 * Lu * Lv) + (a3 * Lu) + (a4 * Lv) + a5;\n\n  float intensity = dot(a0a1a2, vec4(Lu*Lu, Lv*Lv, Lu*Lv, 0.0)) + dot(a3a4a5, vec4(Lu, Lv, 1.0, 0.0));\n  vec4 rgb = texture2D(chrominance, pos);\n\n//  gl_FragColor = rgb;\n  gl_FragColor.r = intensity * rgb.r;\n  gl_FragColor.g = intensity * rgb.g;\n  gl_FragColor.b = intensity * rgb.b;\n  gl_FragColor.a = 1.0;\n}\n";
 
 buildUniforms = function(ptm) {
   var lightCoordinates, makeTexture, uniforms,
@@ -1126,7 +1135,7 @@ drawScene = function(ptm) {
   renderer.clear();
   canvas = $('#three > canvas')[0];
   scene = new THREE.Scene();
-  camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100.0);
+  camera = new THREE.OrthographicCamera(0, 1, 1, 0, 0.1, 100.0);
   camera.position.z = 100.0;
   scene.add(camera);
   uniforms = buildUniforms(ptm);
@@ -1135,7 +1144,9 @@ drawScene = function(ptm) {
     fragmentShader: fragmentShader,
     vertexShader: vertexShader
   });
-  plane = new THREE.Mesh(new THREE.PlaneGeometry(2.0, 2.0, 1, 1), this.material);
+  plane = new THREE.Mesh(new THREE.PlaneGeometry(1, 1, 1, 1), this.material);
+  plane.position.x = 0.5;
+  plane.position.y = 0.5;
   scene.add(plane);
   scene.add(camera);
   animate = function(t) {

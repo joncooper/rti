@@ -30,6 +30,8 @@ class PTM
     @width = Number(@width)
     @height = Number(@height)
 
+    # debugger
+
     # Read 6 scale values (ASCII representation of "floating point")
     # "A newline can be used between the scale values and the bias values"
     # Read 6 bias values (ASCII respresentation of "integer")
@@ -69,15 +71,23 @@ class PTM
     #    coefficient = (raw_coefficient - bias) * scale
     # The 'rehydrated' coefficient is clamped into [0, 255].
 
+    finalize = (i) =>
+      c = @dataStream.readUint8()
+      b = @bias[i]
+      s = @scale[i]
+      cb = clampUint8(c - b)
+      sbs = clampUint8(cb * s)
+      return sbs
+
     for y in [0...@height]
       for x in [0...@width]
         offset = ((@height - 1 - y) * @width * 3) + (x * 3)
-        @tex0[offset]   = clampUint8((@dataStream.readUint8() - @bias[0]) * @scale[0]) # a0
-        @tex0[offset+1] = clampUint8((@dataStream.readUint8() - @bias[1]) * @scale[1]) # a1
-        @tex0[offset+2] = clampUint8((@dataStream.readUint8() - @bias[2]) * @scale[2]) # a2
-        @tex1[offset]   = clampUint8((@dataStream.readUint8() - @bias[3]) * @scale[3]) # a3
-        @tex1[offset+1] = clampUint8((@dataStream.readUint8() - @bias[4]) * @scale[4]) # a4
-        @tex1[offset+2] = clampUint8((@dataStream.readUint8() - @bias[5]) * @scale[5]) # a5
+        @tex0[offset]   = finalize(0)
+        @tex0[offset+1] = finalize(1)
+        @tex0[offset+2] = finalize(2)
+        @tex1[offset]   = finalize(3)
+        @tex1[offset+1] = finalize(4)
+        @tex1[offset+2] = finalize(5)
         if ((y % 100) is 0) and (x is 500)
           console.log @tex0[offset], @tex0[offset+1], @tex0[offset+2]
           console.log @tex1[offset], @tex1[offset+1], @tex1[offset+2]

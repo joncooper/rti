@@ -22,6 +22,7 @@ uniform sampler2D chrominance;
 void main() {
   vec4 a0a1a2 = texture2D(luminanceCoefficients012, pos);
   vec4 a3a4a5 = texture2D(luminanceCoefficients345, pos);
+//  vec4 debug = vec4(pos.x, pos.y, 0.0, 1.0);
 
 // intensity = (a0 * Lu^2) + (a1 * Lv^2) + (a2 * Lu * Lv) + (a3 * Lu) + (a4 * Lv) + a5;
 
@@ -83,7 +84,8 @@ drawScene = (ptm) ->
 
   # Set up the scene
   scene = new THREE.Scene()
-  camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100.0)
+  # camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100.0)
+  camera = new THREE.OrthographicCamera(0, 1, 1, 0, 0.1, 100.0)
   camera.position.z = 100.0
   scene.add(camera)
 
@@ -96,9 +98,11 @@ drawScene = (ptm) ->
   )
 
   plane = new THREE.Mesh(
-    new THREE.PlaneGeometry(2.0, 2.0, 1, 1)
+    new THREE.PlaneGeometry(1, 1, 1, 1)
     @material
   )
+  plane.position.x = 0.5
+  plane.position.y = 0.5
 
   # Complete building the scene
   scene.add(plane)
