@@ -55,12 +55,11 @@ These are stored in reverse-scanline order, which I interpret to mean from botto
    coefficient = (raw_coefficient - bias) * scale
 The 'rehydrated' coefficient is clamped into [0, 255].</p>             </td>             <td class="code">               <div class="highlight"><pre>    <span class="nv">finalize = </span><span class="p">(</span><span class="nx">i</span><span class="p">)</span> <span class="o">=&gt;</span>
       <span class="nv">c = </span><span class="nx">@dataStream</span><span class="p">.</span><span class="nx">readUint8</span><span class="p">()</span>
-      <span class="nv">b = </span><span class="nx">@bias</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span>
-      <span class="nv">s = </span><span class="nx">@scale</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span>
-      <span class="nv">sbs = </span><span class="nx">clampUint8</span><span class="p">((</span><span class="nx">c</span> <span class="o">*</span> <span class="nx">s</span><span class="p">)</span> <span class="o">-</span> <span class="nx">b</span><span class="p">)</span></pre></div>             </td>           </tr>                               <tr id="section-12">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-12">&#182;</a>               </div>               <p>cb = clampUint8(c - b)
-sbs = clampUint8(cb * s)</p>             </td>             <td class="code">               <div class="highlight"><pre>      <span class="k">return</span> <span class="nx">sbs</span>
-
-    <span class="k">for</span> <span class="nx">y</span> <span class="k">in</span> <span class="p">[</span><span class="mi">0</span><span class="p">...</span><span class="nx">@height</span><span class="p">]</span>
+      <span class="k">return</span> <span class="nx">c</span></pre></div>             </td>           </tr>                               <tr id="section-12">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-12">&#182;</a>               </div>               <p>b = @bias[i]
+s = @scale[i]
+cb = clampUint8(c - b)
+sbs = clampUint8(cb * s)
+return sbs</p>             </td>             <td class="code">               <div class="highlight"><pre>    <span class="k">for</span> <span class="nx">y</span> <span class="k">in</span> <span class="p">[</span><span class="mi">0</span><span class="p">...</span><span class="nx">@height</span><span class="p">]</span>
       <span class="k">for</span> <span class="nx">x</span> <span class="k">in</span> <span class="p">[</span><span class="mi">0</span><span class="p">...</span><span class="nx">@width</span><span class="p">]</span>
         <span class="nv">offset = </span><span class="p">((</span><span class="nx">@height</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">-</span> <span class="nx">y</span><span class="p">)</span> <span class="o">*</span> <span class="nx">@width</span> <span class="o">*</span> <span class="mi">3</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="nx">x</span> <span class="o">*</span> <span class="mi">3</span><span class="p">)</span>
         <span class="nx">@tex0</span><span class="p">[</span><span class="nx">offset</span><span class="p">]</span>   <span class="o">=</span> <span class="nx">finalize</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>

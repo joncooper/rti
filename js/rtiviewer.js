@@ -951,12 +951,9 @@ PTM = (function() {
     this.tex1 = new Uint8Array(this.height * this.width * 3);
     this.tex2 = new Uint8Array(this.height * this.width * 3);
     finalize = function(i) {
-      var c, sbs;
+      var c;
       c = _this.dataStream.readUint8();
-      b = _this.bias[i];
-      s = _this.scale[i];
-      sbs = clampUint8((c * s) - b);
-      return sbs;
+      return c;
     };
     for (y = 0, _ref3 = this.height; 0 <= _ref3 ? y < _ref3 : y > _ref3; 0 <= _ref3 ? y++ : y--) {
       for (x = 0, _ref4 = this.width; 0 <= _ref4 ? x < _ref4 : x > _ref4; 0 <= _ref4 ? x++ : x--) {
@@ -1083,7 +1080,7 @@ var buildUniforms, drawChrominanceData, drawScene, fragmentShader, loadAndDispla
 
 vertexShader = "\nvarying vec2 pos;\n\nvoid main() {\n  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);\n  pos = uv;\n}\n";
 
-fragmentShader = "\nvarying vec2 pos;\n\nuniform float Lu;\nuniform float Lv;\nuniform sampler2D luminanceCoefficients012;\nuniform sampler2D luminanceCoefficients345;\nuniform sampler2D chrominance;\n\nvoid main() {\n  vec4 a0a1a2 = texture2D(luminanceCoefficients012, pos);\n  vec4 a3a4a5 = texture2D(luminanceCoefficients345, pos);\n//  vec4 debug = vec4(pos.x, pos.y, 0.0, 1.0);\n\n// intensity = (a0 * Lu^2) + (a1 * Lv^2) + (a2 * Lu * Lv) + (a3 * Lu) + (a4 * Lv) + a5;\n\n  float intensity = dot(a0a1a2, vec4(Lu*Lu, Lv*Lv, Lu*Lv, 0.0)) + dot(a3a4a5, vec4(Lu, Lv, 1.0, 0.0));\n  vec4 rgb = texture2D(chrominance, pos);\n\n//  gl_FragColor = rgb;\n  gl_FragColor.r = intensity * rgb.r;\n  gl_FragColor.g = intensity * rgb.g;\n  gl_FragColor.b = intensity * rgb.b;\n  gl_FragColor.a = 1.0;\n}\n";
+fragmentShader = "\nvarying vec2 pos;\n\nuniform vec3 s0s1s2;\nuniform vec3 s3s4s5;\nuniform vec3 b0b1b2;\nuniform vec3 b3b4b5;\nuniform float Lu;\nuniform float Lv;\nuniform sampler2D luminanceCoefficients012;\nuniform sampler2D luminanceCoefficients345;\nuniform sampler2D chrominance;\n\nvoid main() {\n  vec4 a0a1a2 = texture2D(luminanceCoefficients012, pos);\n  vec4 a3a4a5 = texture2D(luminanceCoefficients345, pos);\n\n  // GLSL vector multiplication is componentwise\n\n  a0a1a2.x = (a0a1a2.x - b0b1b2.x) * s0s1s2.x;\n  a0a1a2.y = (a0a1a2.y - b0b1b2.y) * s0s1s2.y;\n  a0a1a2.z = (a0a1a2.z - b0b1b2.z) * s0s1s2.z;\n\n  a3a4a5.x = (a3a4a5.x - b3b4b5.x) * s3s4s5.x;\n  a3a4a5.y = (a3a4a5.y - b3b4b5.y) * s3s4s5.y;\n  a3a4a5.z = (a3a4a5.z - b3b4b5.z) * s3s4s5.z;\n\n//  vec4 debug = vec4(pos.x, pos.y, 0.0, 1.0);\n\n// intensity = (a0 * Lu^2) + (a1 * Lv^2) + (a2 * Lu * Lv) + (a3 * Lu) + (a4 * Lv) + a5;\n\n  float intensity = dot(a0a1a2, vec4(Lu*Lu, Lv*Lv, Lu*Lv, 0.0)) + dot(a3a4a5, vec4(Lu, Lv, 1.0, 0.0));\n  vec4 rgb = texture2D(chrominance, pos);\n\n  gl_FragColor.r = intensity * rgb.r;\n  gl_FragColor.g = intensity * rgb.g;\n  gl_FragColor.b = intensity * rgb.b;\n  gl_FragColor.a = 1.0;\n\n}\n";
 
 buildUniforms = function(ptm) {
   var lightCoordinates, makeTexture, uniforms,
@@ -1099,6 +1096,22 @@ buildUniforms = function(ptm) {
     return t;
   };
   uniforms = {
+    b0b1b2: {
+      type: 'v3',
+      value: new THREE.Vector3(ptm.bias[0] / 255.0, ptm.bias[1] / 255.0, ptm.bias[2] / 255.0)
+    },
+    b3b4b5: {
+      type: 'v3',
+      value: new THREE.Vector3(ptm.bias[3] / 255.0, ptm.bias[4] / 255.0, ptm.bias[5] / 255.0)
+    },
+    s0s1s2: {
+      type: 'v3',
+      value: new THREE.Vector3(ptm.scale[0], ptm.scale[1], ptm.scale[2])
+    },
+    s3s4s5: {
+      type: 'v3',
+      value: new THREE.Vector3(ptm.scale[3], ptm.scale[4], ptm.scale[5])
+    },
     Lu: {
       type: 'f',
       value: lightCoordinates.u
@@ -1135,7 +1148,7 @@ drawScene = function(ptm) {
   renderer.clear();
   canvas = $('#three > canvas')[0];
   scene = new THREE.Scene();
-  camera = new THREE.OrthographicCamera(0, 1, 1, 0, 0.1, 100.0);
+  camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100.0);
   camera.position.z = 100.0;
   scene.add(camera);
   uniforms = buildUniforms(ptm);
@@ -1145,8 +1158,8 @@ drawScene = function(ptm) {
     vertexShader: vertexShader
   });
   plane = new THREE.Mesh(new THREE.PlaneGeometry(1, 1, 1, 1), this.material);
-  plane.position.x = 0.5;
-  plane.position.y = 0.5;
+  plane.scale.x = 2.0;
+  plane.scale.y = 2.0;
   scene.add(plane);
   scene.add(camera);
   animate = function(t) {

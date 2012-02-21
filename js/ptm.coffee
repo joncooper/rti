@@ -73,11 +73,12 @@ class PTM
 
     finalize = (i) =>
       c = @dataStream.readUint8()
-      b = @bias[i]
-      s = @scale[i]
-      cb = clampUint8(c - b)
-      sbs = clampUint8(cb * s)
-      return sbs
+      return c
+      # b = @bias[i]
+      # s = @scale[i]
+      # cb = clampUint8(c - b)
+      # sbs = clampUint8(cb * s)
+      # return sbs
 
     for y in [0...@height]
       for x in [0...@width]

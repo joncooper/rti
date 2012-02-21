@@ -27,6 +27,10 @@
 
 <span class="s2">varying vec2 pos;</span>
 
+<span class="s2">uniform vec3 s0s1s2;</span>
+<span class="s2">uniform vec3 s3s4s5;</span>
+<span class="s2">uniform vec3 b0b1b2;</span>
+<span class="s2">uniform vec3 b3b4b5;</span>
 <span class="s2">uniform float Lu;</span>
 <span class="s2">uniform float Lv;</span>
 <span class="s2">uniform sampler2D luminanceCoefficients012;</span>
@@ -36,6 +40,17 @@
 <span class="s2">void main() {</span>
 <span class="s2">  vec4 a0a1a2 = texture2D(luminanceCoefficients012, pos);</span>
 <span class="s2">  vec4 a3a4a5 = texture2D(luminanceCoefficients345, pos);</span>
+
+<span class="s2">  // GLSL vector multiplication is componentwise</span>
+
+<span class="s2">  a0a1a2.x = (a0a1a2.x - b0b1b2.x) * s0s1s2.x;</span>
+<span class="s2">  a0a1a2.y = (a0a1a2.y - b0b1b2.y) * s0s1s2.y;</span>
+<span class="s2">  a0a1a2.z = (a0a1a2.z - b0b1b2.z) * s0s1s2.z;</span>
+
+<span class="s2">  a3a4a5.x = (a3a4a5.x - b3b4b5.x) * s3s4s5.x;</span>
+<span class="s2">  a3a4a5.y = (a3a4a5.y - b3b4b5.y) * s3s4s5.y;</span>
+<span class="s2">  a3a4a5.z = (a3a4a5.z - b3b4b5.z) * s3s4s5.z;</span>
+
 <span class="s2">//  vec4 debug = vec4(pos.x, pos.y, 0.0, 1.0);</span>
 
 <span class="s2">// intensity = (a0 * Lu^2) + (a1 * Lv^2) + (a2 * Lu * Lv) + (a3 * Lu) + (a4 * Lv) + a5;</span>
@@ -43,11 +58,11 @@
 <span class="s2">  float intensity = dot(a0a1a2, vec4(Lu*Lu, Lv*Lv, Lu*Lv, 0.0)) + dot(a3a4a5, vec4(Lu, Lv, 1.0, 0.0));</span>
 <span class="s2">  vec4 rgb = texture2D(chrominance, pos);</span>
 
-<span class="s2">//  gl_FragColor = rgb;</span>
 <span class="s2">  gl_FragColor.r = intensity * rgb.r;</span>
 <span class="s2">  gl_FragColor.g = intensity * rgb.g;</span>
 <span class="s2">  gl_FragColor.b = intensity * rgb.b;</span>
 <span class="s2">  gl_FragColor.a = 1.0;</span>
+
 <span class="s2">}</span>
 
 <span class="s2">&quot;&quot;&quot;</span></pre></div>             </td>           </tr>                               <tr id="section-2">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-2">&#182;</a>               </div>               <p>Build the set of uniforms that will be passed to the shaders</p>             </td>             <td class="code">               <div class="highlight"><pre><span class="nv">buildUniforms = </span><span class="nf">(ptm) -&gt;</span>
@@ -57,6 +72,18 @@
     <span class="k">return</span> <span class="nx">t</span>
 
   <span class="nv">uniforms =</span>
+    <span class="nv">b0b1b2:</span>
+      <span class="nv">type: </span><span class="s1">&#39;v3&#39;</span>
+      <span class="nv">value: </span><span class="k">new</span> <span class="nx">THREE</span><span class="p">.</span><span class="nx">Vector3</span><span class="p">(</span><span class="nx">ptm</span><span class="p">.</span><span class="nx">bias</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">/</span><span class="mf">255.0</span><span class="p">,</span> <span class="nx">ptm</span><span class="p">.</span><span class="nx">bias</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">/</span><span class="mf">255.0</span><span class="p">,</span> <span class="nx">ptm</span><span class="p">.</span><span class="nx">bias</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">/</span><span class="mf">255.0</span><span class="p">)</span>
+    <span class="nv">b3b4b5:</span>
+      <span class="nv">type: </span><span class="s1">&#39;v3&#39;</span>
+      <span class="nv">value: </span><span class="k">new</span> <span class="nx">THREE</span><span class="p">.</span><span class="nx">Vector3</span><span class="p">(</span><span class="nx">ptm</span><span class="p">.</span><span class="nx">bias</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="o">/</span><span class="mf">255.0</span><span class="p">,</span> <span class="nx">ptm</span><span class="p">.</span><span class="nx">bias</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span><span class="o">/</span><span class="mf">255.0</span><span class="p">,</span> <span class="nx">ptm</span><span class="p">.</span><span class="nx">bias</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span><span class="o">/</span><span class="mf">255.0</span><span class="p">)</span>
+    <span class="nv">s0s1s2:</span>
+      <span class="nv">type: </span><span class="s1">&#39;v3&#39;</span>
+      <span class="nv">value: </span><span class="k">new</span> <span class="nx">THREE</span><span class="p">.</span><span class="nx">Vector3</span><span class="p">(</span><span class="nx">ptm</span><span class="p">.</span><span class="nx">scale</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nx">ptm</span><span class="p">.</span><span class="nx">scale</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="nx">ptm</span><span class="p">.</span><span class="nx">scale</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+    <span class="nv">s3s4s5:</span>
+      <span class="nv">type: </span><span class="s1">&#39;v3&#39;</span>
+      <span class="nv">value: </span><span class="k">new</span> <span class="nx">THREE</span><span class="p">.</span><span class="nx">Vector3</span><span class="p">(</span><span class="nx">ptm</span><span class="p">.</span><span class="nx">scale</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="nx">ptm</span><span class="p">.</span><span class="nx">scale</span><span class="p">[</span><span class="mi">4</span><span class="p">],</span> <span class="nx">ptm</span><span class="p">.</span><span class="nx">scale</span><span class="p">[</span><span class="mi">5</span><span class="p">])</span>
     <span class="nv">Lu:</span>
       <span class="nv">type: </span><span class="s1">&#39;f&#39;</span>
       <span class="nv">value: </span><span class="nx">lightCoordinates</span><span class="p">.</span><span class="nx">u</span>
@@ -81,7 +108,7 @@
   <span class="nx">$</span><span class="p">(</span><span class="s1">&#39;#three&#39;</span><span class="p">).</span><span class="nx">append</span><span class="p">(</span><span class="nx">renderer</span><span class="p">.</span><span class="nx">domElement</span><span class="p">)</span>
   <span class="nx">renderer</span><span class="p">.</span><span class="nx">setClearColorHex</span><span class="p">(</span><span class="mh">0x555555</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
   <span class="nx">renderer</span><span class="p">.</span><span class="nx">clear</span><span class="p">()</span>
-  <span class="nv">canvas = </span><span class="nx">$</span><span class="p">(</span><span class="s1">&#39;#three &gt; canvas&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span></pre></div>             </td>           </tr>                               <tr id="section-6">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-6">&#182;</a>               </div>               <p>Set up the scene</p>             </td>             <td class="code">               <div class="highlight"><pre>  <span class="nv">scene = </span><span class="k">new</span> <span class="nx">THREE</span><span class="p">.</span><span class="nx">Scene</span><span class="p">()</span></pre></div>             </td>           </tr>                               <tr id="section-7">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-7">&#182;</a>               </div>               <p>camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100.0)</p>             </td>             <td class="code">               <div class="highlight"><pre>  <span class="nv">camera = </span><span class="k">new</span> <span class="nx">THREE</span><span class="p">.</span><span class="nx">OrthographicCamera</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">100.0</span><span class="p">)</span>
+  <span class="nv">canvas = </span><span class="nx">$</span><span class="p">(</span><span class="s1">&#39;#three &gt; canvas&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span></pre></div>             </td>           </tr>                               <tr id="section-6">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-6">&#182;</a>               </div>               <p>Set up the scene</p>             </td>             <td class="code">               <div class="highlight"><pre>  <span class="nv">scene = </span><span class="k">new</span> <span class="nx">THREE</span><span class="p">.</span><span class="nx">Scene</span><span class="p">()</span></pre></div>             </td>           </tr>                               <tr id="section-7">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-7">&#182;</a>               </div>               <p>camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100.0)</p>             </td>             <td class="code">               <div class="highlight"><pre>  <span class="nv">camera = </span><span class="k">new</span> <span class="nx">THREE</span><span class="p">.</span><span class="nx">OrthographicCamera</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">100.0</span><span class="p">)</span>
   <span class="nv">camera.position.z = </span><span class="mf">100.0</span>
   <span class="nx">scene</span><span class="p">.</span><span class="nx">add</span><span class="p">(</span><span class="nx">camera</span><span class="p">)</span></pre></div>             </td>           </tr>                               <tr id="section-8">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-8">&#182;</a>               </div>               <p>Bind the uniforms and shaders to the plane we'll use for display</p>             </td>             <td class="code">               <div class="highlight"><pre>  <span class="nv">uniforms = </span><span class="nx">buildUniforms</span><span class="p">(</span><span class="nx">ptm</span><span class="p">)</span>
   <span class="vi">@material = </span><span class="k">new</span> <span class="nx">THREE</span><span class="p">.</span><span class="nx">ShaderMaterial</span><span class="p">(</span>
@@ -94,8 +121,8 @@
     <span class="k">new</span> <span class="nx">THREE</span><span class="p">.</span><span class="nx">PlaneGeometry</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
     <span class="nx">@material</span>
   <span class="p">)</span>
-  <span class="nv">plane.position.x = </span><span class="mf">0.5</span>
-  <span class="nv">plane.position.y = </span><span class="mf">0.5</span></pre></div>             </td>           </tr>                               <tr id="section-9">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-9">&#182;</a>               </div>               <p>Complete building the scene</p>             </td>             <td class="code">               <div class="highlight"><pre>  <span class="nx">scene</span><span class="p">.</span><span class="nx">add</span><span class="p">(</span><span class="nx">plane</span><span class="p">)</span>
+  <span class="nv">plane.scale.x = </span><span class="mf">2.0</span>
+  <span class="nv">plane.scale.y = </span><span class="mf">2.0</span></pre></div>             </td>           </tr>                               <tr id="section-9">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-9">&#182;</a>               </div>               <p>Complete building the scene</p>             </td>             <td class="code">               <div class="highlight"><pre>  <span class="nx">scene</span><span class="p">.</span><span class="nx">add</span><span class="p">(</span><span class="nx">plane</span><span class="p">)</span>
   <span class="nx">scene</span><span class="p">.</span><span class="nx">add</span><span class="p">(</span><span class="nx">camera</span><span class="p">)</span></pre></div>             </td>           </tr>                               <tr id="section-10">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-10">&#182;</a>               </div>               <p>Fired every animation tick</p>             </td>             <td class="code">               <div class="highlight"><pre>  <span class="nv">animate = </span><span class="nf">(t) -&gt;</span>
     <span class="nx">camera</span><span class="p">.</span><span class="nx">lookAt</span><span class="p">(</span><span class="nx">scene</span><span class="p">.</span><span class="nx">position</span><span class="p">)</span>
     <span class="nx">renderer</span><span class="p">.</span><span class="nx">render</span><span class="p">(</span><span class="nx">scene</span><span class="p">,</span> <span class="nx">camera</span><span class="p">)</span>

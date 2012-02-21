@@ -13,6 +13,10 @@ fragmentShader = """
 
 varying vec2 pos;
 
+uniform vec3 s0s1s2;
+uniform vec3 s3s4s5;
+uniform vec3 b0b1b2;
+uniform vec3 b3b4b5;
 uniform float Lu;
 uniform float Lv;
 uniform sampler2D luminanceCoefficients012;
@@ -22,6 +26,17 @@ uniform sampler2D chrominance;
 void main() {
   vec4 a0a1a2 = texture2D(luminanceCoefficients012, pos);
   vec4 a3a4a5 = texture2D(luminanceCoefficients345, pos);
+
+  // GLSL vector multiplication is componentwise
+
+  a0a1a2.x = (a0a1a2.x - b0b1b2.x) * s0s1s2.x;
+  a0a1a2.y = (a0a1a2.y - b0b1b2.y) * s0s1s2.y;
+  a0a1a2.z = (a0a1a2.z - b0b1b2.z) * s0s1s2.z;
+
+  a3a4a5.x = (a3a4a5.x - b3b4b5.x) * s3s4s5.x;
+  a3a4a5.y = (a3a4a5.y - b3b4b5.y) * s3s4s5.y;
+  a3a4a5.z = (a3a4a5.z - b3b4b5.z) * s3s4s5.z;
+
 //  vec4 debug = vec4(pos.x, pos.y, 0.0, 1.0);
 
 // intensity = (a0 * Lu^2) + (a1 * Lv^2) + (a2 * Lu * Lv) + (a3 * Lu) + (a4 * Lv) + a5;
@@ -29,11 +44,11 @@ void main() {
   float intensity = dot(a0a1a2, vec4(Lu*Lu, Lv*Lv, Lu*Lv, 0.0)) + dot(a3a4a5, vec4(Lu, Lv, 1.0, 0.0));
   vec4 rgb = texture2D(chrominance, pos);
 
-//  gl_FragColor = rgb;
   gl_FragColor.r = intensity * rgb.r;
   gl_FragColor.g = intensity * rgb.g;
   gl_FragColor.b = intensity * rgb.b;
   gl_FragColor.a = 1.0;
+
 }
 
 """
@@ -50,6 +65,18 @@ buildUniforms = (ptm) ->
     return t
 
   uniforms =
+    b0b1b2:
+      type: 'v3'
+      value: new THREE.Vector3(ptm.bias[0]/255.0, ptm.bias[1]/255.0, ptm.bias[2]/255.0)
+    b3b4b5:
+      type: 'v3'
+      value: new THREE.Vector3(ptm.bias[3]/255.0, ptm.bias[4]/255.0, ptm.bias[5]/255.0)
+    s0s1s2:
+      type: 'v3'
+      value: new THREE.Vector3(ptm.scale[0], ptm.scale[1], ptm.scale[2])
+    s3s4s5:
+      type: 'v3'
+      value: new THREE.Vector3(ptm.scale[3], ptm.scale[4], ptm.scale[5])
     Lu:
       type: 'f'
       value: lightCoordinates.u
@@ -85,7 +112,7 @@ drawScene = (ptm) ->
   # Set up the scene
   scene = new THREE.Scene()
   # camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100.0)
-  camera = new THREE.OrthographicCamera(0, 1, 1, 0, 0.1, 100.0)
+  camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100.0)
   camera.position.z = 100.0
   scene.add(camera)
 
@@ -101,8 +128,8 @@ drawScene = (ptm) ->
     new THREE.PlaneGeometry(1, 1, 1, 1)
     @material
   )
-  plane.position.x = 0.5
-  plane.position.y = 0.5
+  plane.scale.x = 2.0
+  plane.scale.y = 2.0
 
   # Complete building the scene
   scene.add(plane)
