@@ -9,6 +9,18 @@ void main() {
 
 """
 
+# We have to rehydrate the coefficients in the shader, even though they are invariant over lighting direction.
+# Why? We can't pass a floating-point texture with vanilla GLSL.
+#
+# We need floats per pixel; imagine we have a pixel that looks like:
+#    raw coefficient = 44
+#    bias            = 234
+#    scale           = 2.0
+# We compute a 'rehydrated' coefficient that is == -380. Which is unfortunately not expressible as a uint8.
+#
+# The options are: implement a floating-point encoding scheme like IEEE 754, or just rely on the fact that the GPU is fast :)
+# An additional multiply and a subtract per pixel never hurt anyone!
+
 fragmentShader = """
 
 varying vec2 pos;
@@ -37,18 +49,13 @@ void main() {
   a3a4a5.y = (a3a4a5.y - b3b4b5.y) * s3s4s5.y;
   a3a4a5.z = (a3a4a5.z - b3b4b5.z) * s3s4s5.z;
 
-//  vec4 debug = vec4(pos.x, pos.y, 0.0, 1.0);
-
 // intensity = (a0 * Lu^2) + (a1 * Lv^2) + (a2 * Lu * Lv) + (a3 * Lu) + (a4 * Lv) + a5;
 
   float intensity = dot(a0a1a2, vec4(Lu*Lu, Lv*Lv, Lu*Lv, 0.0)) + dot(a3a4a5, vec4(Lu, Lv, 1.0, 0.0));
   vec4 rgb = texture2D(chrominance, pos);
 
-  gl_FragColor.r = intensity * rgb.r;
-  gl_FragColor.g = intensity * rgb.g;
-  gl_FragColor.b = intensity * rgb.b;
+  gl_FragColor = rgb * intensity;
   gl_FragColor.a = 1.0;
-
 }
 
 """

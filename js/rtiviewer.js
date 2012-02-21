@@ -947,6 +947,7 @@ PTM = (function() {
     console.log("Width:  " + this.width);
     console.log("Scale:  " + this.scale);
     console.log("Bias:   " + this.bias);
+    debugger;
     this.tex0 = new Uint8Array(this.height * this.width * 3);
     this.tex1 = new Uint8Array(this.height * this.width * 3);
     this.tex2 = new Uint8Array(this.height * this.width * 3);
@@ -1080,7 +1081,7 @@ var buildUniforms, drawChrominanceData, drawScene, fragmentShader, loadAndDispla
 
 vertexShader = "\nvarying vec2 pos;\n\nvoid main() {\n  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);\n  pos = uv;\n}\n";
 
-fragmentShader = "\nvarying vec2 pos;\n\nuniform vec3 s0s1s2;\nuniform vec3 s3s4s5;\nuniform vec3 b0b1b2;\nuniform vec3 b3b4b5;\nuniform float Lu;\nuniform float Lv;\nuniform sampler2D luminanceCoefficients012;\nuniform sampler2D luminanceCoefficients345;\nuniform sampler2D chrominance;\n\nvoid main() {\n  vec4 a0a1a2 = texture2D(luminanceCoefficients012, pos);\n  vec4 a3a4a5 = texture2D(luminanceCoefficients345, pos);\n\n  // GLSL vector multiplication is componentwise\n\n  a0a1a2.x = (a0a1a2.x - b0b1b2.x) * s0s1s2.x;\n  a0a1a2.y = (a0a1a2.y - b0b1b2.y) * s0s1s2.y;\n  a0a1a2.z = (a0a1a2.z - b0b1b2.z) * s0s1s2.z;\n\n  a3a4a5.x = (a3a4a5.x - b3b4b5.x) * s3s4s5.x;\n  a3a4a5.y = (a3a4a5.y - b3b4b5.y) * s3s4s5.y;\n  a3a4a5.z = (a3a4a5.z - b3b4b5.z) * s3s4s5.z;\n\n//  vec4 debug = vec4(pos.x, pos.y, 0.0, 1.0);\n\n// intensity = (a0 * Lu^2) + (a1 * Lv^2) + (a2 * Lu * Lv) + (a3 * Lu) + (a4 * Lv) + a5;\n\n  float intensity = dot(a0a1a2, vec4(Lu*Lu, Lv*Lv, Lu*Lv, 0.0)) + dot(a3a4a5, vec4(Lu, Lv, 1.0, 0.0));\n  vec4 rgb = texture2D(chrominance, pos);\n\n  gl_FragColor.r = intensity * rgb.r;\n  gl_FragColor.g = intensity * rgb.g;\n  gl_FragColor.b = intensity * rgb.b;\n  gl_FragColor.a = 1.0;\n\n}\n";
+fragmentShader = "\nvarying vec2 pos;\n\nuniform vec3 s0s1s2;\nuniform vec3 s3s4s5;\nuniform vec3 b0b1b2;\nuniform vec3 b3b4b5;\nuniform float Lu;\nuniform float Lv;\nuniform sampler2D luminanceCoefficients012;\nuniform sampler2D luminanceCoefficients345;\nuniform sampler2D chrominance;\n\nvoid main() {\n  vec4 a0a1a2 = texture2D(luminanceCoefficients012, pos);\n  vec4 a3a4a5 = texture2D(luminanceCoefficients345, pos);\n\n  // GLSL vector multiplication is componentwise\n\n  a0a1a2.x = (a0a1a2.x - b0b1b2.x) * s0s1s2.x;\n  a0a1a2.y = (a0a1a2.y - b0b1b2.y) * s0s1s2.y;\n  a0a1a2.z = (a0a1a2.z - b0b1b2.z) * s0s1s2.z;\n\n  a3a4a5.x = (a3a4a5.x - b3b4b5.x) * s3s4s5.x;\n  a3a4a5.y = (a3a4a5.y - b3b4b5.y) * s3s4s5.y;\n  a3a4a5.z = (a3a4a5.z - b3b4b5.z) * s3s4s5.z;\n\n// intensity = (a0 * Lu^2) + (a1 * Lv^2) + (a2 * Lu * Lv) + (a3 * Lu) + (a4 * Lv) + a5;\n\n  float intensity = dot(a0a1a2, vec4(Lu*Lu, Lv*Lv, Lu*Lv, 0.0)) + dot(a3a4a5, vec4(Lu, Lv, 1.0, 0.0));\n  vec4 rgb = texture2D(chrominance, pos);\n\n  gl_FragColor = rgb * intensity;\n  gl_FragColor.a = 1.0;\n}\n";
 
 buildUniforms = function(ptm) {
   var lightCoordinates, makeTexture, uniforms,
