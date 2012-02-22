@@ -63,8 +63,6 @@ class PTM
     # Where a0...5 are polynomial coefficients for the luminance polynomial and rgb are color values
     # These are stored in reverse-scanline order, which I interpret to mean from bottom left to bottom right, then up LTR
 
-    debugger
-
     @tex0 = new Uint8Array(@height * @width * 3)
     @tex1 = new Uint8Array(@height * @width * 3)
     @tex2 = new Uint8Array(@height * @width * 3)

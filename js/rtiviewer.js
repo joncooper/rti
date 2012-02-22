@@ -947,7 +947,6 @@ PTM = (function() {
     console.log("Width:  " + this.width);
     console.log("Scale:  " + this.scale);
     console.log("Bias:   " + this.bias);
-    debugger;
     this.tex0 = new Uint8Array(this.height * this.width * 3);
     this.tex1 = new Uint8Array(this.height * this.width * 3);
     this.tex2 = new Uint8Array(this.height * this.width * 3);
@@ -1077,11 +1076,11 @@ function handler(event) {
 
 })(jQuery);
 
-var buildUniforms, drawChrominanceData, drawScene, fragmentShader, loadAndDisplay, vertexShader;
+var buildUniforms, drawChrominanceData, drawScene, fragmentShader, vertexShader;
 
 vertexShader = "\nvarying vec2 pos;\n\nvoid main() {\n  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);\n  pos = uv;\n}\n";
 
-fragmentShader = "\nvarying vec2 pos;\n\nuniform vec3 s0s1s2;\nuniform vec3 s3s4s5;\nuniform vec3 b0b1b2;\nuniform vec3 b3b4b5;\nuniform float Lu;\nuniform float Lv;\nuniform sampler2D luminanceCoefficients012;\nuniform sampler2D luminanceCoefficients345;\nuniform sampler2D chrominance;\n\nvoid main() {\n  vec4 a0a1a2 = texture2D(luminanceCoefficients012, pos);\n  vec4 a3a4a5 = texture2D(luminanceCoefficients345, pos);\n\n  // GLSL vector multiplication is componentwise\n\n  a0a1a2.x = (a0a1a2.x - b0b1b2.x) * s0s1s2.x;\n  a0a1a2.y = (a0a1a2.y - b0b1b2.y) * s0s1s2.y;\n  a0a1a2.z = (a0a1a2.z - b0b1b2.z) * s0s1s2.z;\n\n  a3a4a5.x = (a3a4a5.x - b3b4b5.x) * s3s4s5.x;\n  a3a4a5.y = (a3a4a5.y - b3b4b5.y) * s3s4s5.y;\n  a3a4a5.z = (a3a4a5.z - b3b4b5.z) * s3s4s5.z;\n\n// intensity = (a0 * Lu^2) + (a1 * Lv^2) + (a2 * Lu * Lv) + (a3 * Lu) + (a4 * Lv) + a5;\n\n  float intensity = dot(a0a1a2, vec4(Lu*Lu, Lv*Lv, Lu*Lv, 0.0)) + dot(a3a4a5, vec4(Lu, Lv, 1.0, 0.0));\n  vec4 rgb = texture2D(chrominance, pos);\n\n  gl_FragColor = rgb * intensity;\n  gl_FragColor.a = 1.0;\n}\n";
+fragmentShader = "\nvarying vec2 pos;\n\nuniform vec3 s0s1s2;\nuniform vec3 s3s4s5;\nuniform vec3 b0b1b2;\nuniform vec3 b3b4b5;\nuniform float Lu;\nuniform float Lv;\nuniform int drawNormalsMode;\nuniform float diffuseGain;\nuniform sampler2D luminanceCoefficients012;\nuniform sampler2D luminanceCoefficients345;\nuniform sampler2D chrominance;\n\n// See http://www.hpl.hp.com/research/ptm/papers/Eq19Correction.pdf\n\nvec2 maximumLuminance(in vec4 a0a1a2, in vec4 a3a4a5) {\n  highp float a0, a1, a2, a3, a4, a5;\n  a0 = a0a1a2.x;\n  a1 = a0a1a2.y;\n  a2 = a0a1a2.z;\n  a3 = a3a4a5.x;\n  a4 = a3a4a5.y;\n  a5 = a3a4a5.z;\n\n  float lu0 = ((a2 * a4) - (2.0 * a1 * a3)) / ((4.0 * a0 * a1) - (a2 * a2));\n  float lv0 = ((a2 * a3) - (2.0 * a0 * a4)) / ((4.0 * a0 * a1) - (a2 * a2));\n  return vec2(lu0, lv0);\n}\n\nvec3 recoveredSurfaceNormal(in vec4 a0a1a2, in vec4 a3a4a5) {\n  vec2 maxL = maximumLuminance(a0a1a2, a3a4a5);\n  float normalZ = sqrt(1.0 - (maxL.x * maxL.x) - (maxL.y * maxL.y));\n  vec3 recoveredNormal = vec3(maxL, normalZ);\n  return recoveredNormal;\n}\n\nvoid applyDiffuseGain(float gain, inout vec4 a0a1a2, inout vec4 a3a4a5) {\n  highp float a0, a1, a2, a3, a4, a5, a0p, a1p, a2p, a3p, a4p, a5p, lu0, lv0;\n  vec2 maxL;\n\n  a0 = a0a1a2.x;\n  a1 = a0a1a2.y;\n  a2 = a0a1a2.z;\n  a3 = a3a4a5.x;\n  a4 = a3a4a5.y;\n  a5 = a3a4a5.z;\n\n  maxL = maximumLuminance(a0a1a2, a3a4a5);\n  lu0 = maxL.x;\n  lv0 = maxL.y;\n\n  a0p = gain * a0;\n  a1p = gain * a1;\n  a2p = gain * a2;\n  a3p = (1.0 - gain) * ((2.0 * a0 * lu0) + (a2 * lv0)) + a3;\n  a4p = (1.0 - gain) * ((2.0 * a1 * lv0) + (a2 * lu0)) + a4;\n  a5p = (1.0 - gain) * ((a0 * lu0 * lu0) + (a1 * lv0 * lv0) + (a2 * lu0 * lv0)) + ((a3 - a3p) * lu0) + ((a4 - a4p) * lv0) + a5;\n\n  a0a1a2 = vec4(a0p, a1p, a2p, 0.0);\n  a3a4a5 = vec4(a3p, a4p, a5p, 0.0);\n  return;\n}\n\nvoid main() {\n  vec4 a0a1a2 = texture2D(luminanceCoefficients012, pos);\n  vec4 a3a4a5 = texture2D(luminanceCoefficients345, pos);\n\n  // GLSL vector operations are componentwise\n\n  a0a1a2.xyz = (a0a1a2.xyz - b0b1b2.xyz) * s0s1s2.xyz;\n  a3a4a5.xyz = (a3a4a5.xyz - b3b4b5.xyz) * s3s4s5.xyz;\n\n  if (diffuseGain > 0.0) {\n    applyDiffuseGain(diffuseGain, a0a1a2, a3a4a5);\n  }\n\n  // intensity = (a0 * Lu^2) + (a1 * Lv^2) + (a2 * Lu * Lv) + (a3 * Lu) + (a4 * Lv) + a5;\n\n  float intensity = dot(a0a1a2, vec4(Lu*Lu, Lv*Lv, Lu*Lv, 0.0)) + dot(a3a4a5, vec4(Lu, Lv, 1.0, 0.0));\n  vec4 rgb = texture2D(chrominance, pos);\n\n  gl_FragColor = rgb * intensity;\n  gl_FragColor.a = 1.0;\n\n  if (drawNormalsMode == 1) {\n    gl_FragColor = vec4(recoveredSurfaceNormal(a0a1a2, a3a4a5), 1.0);\n  }\n}\n";
 
 buildUniforms = function(ptm) {
   var lightCoordinates, makeTexture, uniforms,
@@ -1121,6 +1120,10 @@ buildUniforms = function(ptm) {
       type: 'f',
       value: lightCoordinates.v
     },
+    drawNormalsMode: {
+      type: 'i',
+      value: 0
+    },
     luminanceCoefficients012: {
       type: 't',
       value: 0,
@@ -1135,13 +1138,18 @@ buildUniforms = function(ptm) {
       type: 't',
       value: 2,
       texture: makeTexture(ptm.tex2)
+    },
+    diffuseGain: {
+      type: 'f',
+      value: 0.0
     }
   };
   return uniforms;
 };
 
 drawScene = function(ptm) {
-  var animate, camera, canvas, plane, renderer, scene, uniforms;
+  var animate, camera, canvas, canvasPointToLightSpacePoint, moveHandler, panHandler, plane, renderer, scene, uniforms, zoomHandler,
+    _this = this;
   renderer = new THREE.WebGLRenderer();
   renderer.setSize(ptm.width, ptm.height);
   $('#three').append(renderer.domElement);
@@ -1163,6 +1171,56 @@ drawScene = function(ptm) {
   plane.scale.y = 2.0;
   scene.add(plane);
   scene.add(camera);
+  canvasPointToLightSpacePoint = function(x, y) {
+    x = ((x / canvas.width) * 2) - 1;
+    y = (((y / canvas.height) * 2) - 1) * -1;
+    return [x, y];
+  };
+  moveHandler = function(event) {
+    var lx, ly, phi, r, x, y, _ref;
+    if (_this.dragging) return;
+    _ref = canvasPointToLightSpacePoint(event.offsetX, event.offsetY), x = _ref[0], y = _ref[1];
+    phi = Math.atan2(y, x);
+    r = Math.min(Math.sqrt(x * x + y * y), 1) / 1;
+    lx = r * Math.cos(phi);
+    ly = r * Math.sin(phi);
+    _this.material.uniforms.Lu.value = lx;
+    return _this.material.uniforms.Lv.value = ly;
+  };
+  panHandler = function(event) {
+    var deltaX, deltaY;
+    deltaX = event.offsetX - this.dragStart.x;
+    deltaY = event.offsetY - this.dragStart.y;
+    plane.position.x = planeStart.x + ((deltaX / (canvas.width * plane.scale.x)) * (2.0 * plane.scale.x));
+    return plane.position.y = planeStart.y + ((-deltaY / (canvas.height * plane.scale.y)) * (2.0 * plane.scale.y));
+  };
+  $(canvas).mousedown(function(event) {
+    _this.dragging = true;
+    _this.dragStart = {
+      x: event.offsetX,
+      y: event.offsetY
+    };
+    return _this.planeStart = {
+      x: plane.position.x,
+      y: plane.position.y
+    };
+  });
+  $(canvas).mousemove(function(event) {
+    if (!_this.dragging) return;
+    return panHandler(event);
+  });
+  $(canvas).mouseup(function(event) {
+    return _this.dragging = false;
+  });
+  zoomHandler = function(deltaY) {
+    plane.scale.x += deltaY * 0.05;
+    plane.scale.x = Math.max(plane.scale.x, 1.0);
+    return plane.scale.y = plane.scale.x;
+  };
+  $('#three > canvas').mousemove(moveHandler);
+  $('#three > canvas').mousewheel(function(event, delta, deltaX, deltaY) {
+    return zoomHandler(deltaY);
+  });
   animate = function(t) {
     camera.lookAt(scene.position);
     renderer.render(scene, camera);
@@ -1171,24 +1229,17 @@ drawScene = function(ptm) {
   return animate(new Date().getTime());
 };
 
-loadAndDisplay = function(url) {
-  var rtiFile;
-  $('#three > canvas').remove();
-  $('#three').addClass('loading');
-  rtiFile = new BinaryFile(url);
-  return rtiFile.load(function() {
-    var rti;
-    rti = new RTI(new DataViewStream(rtiFile.dataStream));
-    return rti.parse(function() {
-      $('#three').removeClass('loading');
-      return drawScene(rti);
-    });
-  });
+window.setG = function(gain) {
+  return this.material.uniforms.diffuseGain.value = gain;
 };
 
 window.setL = function(lu, lv) {
   this.material.uniforms.Lu.value = lu;
   return this.material.uniforms.Lv.value = lv;
+};
+
+window.toggleDrawNormalsMode = function() {
+  return this.material.uniforms.drawNormalsMode.value = (this.material.uniforms.drawNormalsMode.value + 1) % 2;
 };
 
 drawChrominanceData = function(ptm) {
