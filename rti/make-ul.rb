@@ -5,9 +5,9 @@ puts <<EOT
 <ul class="dropdown-menu rti-file-list">
 EOT
 
-Dir['*.rti'].each do |fn|
+Dir['*.ptm'].each do |fn|
   _, name, type = fn.match(/(.*)\.(.*)$/).to_a
-  next if type == 'ptm'
+#  next if type == 'ptm'
   puts "<li><a href=\"rti/#{fn}\" data-filetype=\"#{type}\">#{name}</a></li>"
 end
 puts "</ul>" # .dropdown-menu

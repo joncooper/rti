@@ -1,4 +1,7 @@
 .idea/
 rti/*ptm
 rti/dome*.rti
+rti/not_demo/*
 TODO
+.DS_Store
+rti/full_resolution_ptm.htm

@@ -273,7 +273,7 @@ window.setL = (lu, lv) ->
 window.toggleDrawNormalsMode = ->
   @material.uniforms.drawNormalsMode.value = (@material.uniforms.drawNormalsMode.value + 1) % 2
 
-#### Entry point
+#### This does not belong here
 
 drawChrominanceData = (ptm) ->
   $('#three').append('<canvas></canvas>')
@@ -292,10 +292,23 @@ drawChrominanceData = (ptm) ->
       pixelData.data[i+3] = 255
   context.putImageData(pixelData, 0, 0)
 
-$ ->
-  ptmFile = new BinaryFile('rti/WLR-tbird-no-distortion_1000.ptm')
-#  ptmFile = new BinaryFile('rti/Ban-Papyrus_1000.ptm')
+#### Entry point
+
+loadAndDisplay = (url) ->
+  $('#three > canvas').remove()
+  $('#three').addClass('loading')
+
+  ptmFile = new BinaryFile(url)
   ptmFile.load ->
     ptm = new PTM(new DataViewStream(ptmFile.dataStream))
+    #### Parse and draw the scene
     ptm.parse ->
+      $('#three').removeClass('loading')
       drawScene(ptm)
+
+$ ->
+  $('.rti-file-list a').click (e) ->
+    e.preventDefault()
+    loadAndDisplay($(e.target).attr('href'))
+
+  loadAndDisplay('rti/WLR-tbird-no-distortion_1000.ptm')

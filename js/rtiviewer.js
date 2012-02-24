@@ -1076,7 +1076,7 @@ function handler(event) {
 
 })(jQuery);
 
-var buildUniforms, drawChrominanceData, drawScene, fragmentShader, vertexShader;
+var buildUniforms, drawChrominanceData, drawScene, fragmentShader, loadAndDisplay, vertexShader;
 
 vertexShader = "\nvarying vec2 pos;\n\nvoid main() {\n  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);\n  pos = uv;\n}\n";
 
@@ -1263,16 +1263,27 @@ drawChrominanceData = function(ptm) {
   return context.putImageData(pixelData, 0, 0);
 };
 
-$(function() {
+loadAndDisplay = function(url) {
   var ptmFile;
-  ptmFile = new BinaryFile('rti/WLR-tbird-no-distortion_1000.ptm');
+  $('#three > canvas').remove();
+  $('#three').addClass('loading');
+  ptmFile = new BinaryFile(url);
   return ptmFile.load(function() {
     var ptm;
     ptm = new PTM(new DataViewStream(ptmFile.dataStream));
     return ptm.parse(function() {
+      $('#three').removeClass('loading');
       return drawScene(ptm);
     });
   });
+};
+
+$(function() {
+  $('.rti-file-list a').click(function(e) {
+    e.preventDefault();
+    return loadAndDisplay($(e.target).attr('href'));
+  });
+  return loadAndDisplay('rti/WLR-tbird-no-distortion_1000.ptm');
 });
 
 
