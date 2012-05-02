@@ -192,7 +192,11 @@ loadAndDisplay = (url) ->
   $('#three > canvas').remove()
   $('#three').addClass('loading')
 
-  rtiFile = new BinaryFile(url)
+  progressHandler = (message, loaded, total) ->
+    $('progress').attr('value', loaded)
+    $('progress').attr('max', total)
+
+  rtiFile = new BinaryFile(url, progressHandler)
   rtiFile.load ->
     rti = new RTI(new DataViewStream(rtiFile.dataStream))
     #### Parse and draw the scene
@@ -210,5 +214,5 @@ loadAndDisplay = (url) ->
 
 #   # Load initial RTI
 #   loadAndDisplay('rti/coin.rti')
-#p
+#
 #

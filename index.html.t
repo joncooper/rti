@@ -7,6 +7,7 @@
       body {
         background: url(assets/little_pluses.png)
       }
+      .navbar
       .navbar-fixed-bottom {
         position: fixed;
         bottom: 0px;
@@ -44,16 +45,12 @@
       <div class="navbar-inner">
         <div class="container">
           <a class="brand" href="#">GLSL RTI Viewer</a>
-          <div class="nav-collapse">
-<!--
-            <ul class="nav">
-              <li><a href="#about">About</a></li>
-              <li><a href="#source">Source</a></li>
-              <li><a href="#contact">Contact</a></li>
-            </ul>
--->
-          </div><!--/.nav-collapse -->
         --FILES--
+          <ul class="nav">
+            <li>
+              <a href="">Loading: <progress></progress></a>
+            </li>
+          </ul>
           <ul class="nav pull-right">
             <li>
               <a href="http://www.hpl.hp.com/research/ptm/papers/ptm.pdf">The Paper</a>
