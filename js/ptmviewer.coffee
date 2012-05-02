@@ -298,7 +298,11 @@ loadAndDisplay = (url) ->
   $('#three > canvas').remove()
   $('#three').addClass('loading')
 
-  ptmFile = new BinaryFile(url)
+  progressHandler = (message, loaded, total) ->
+    $('progress').attr('value', loaded)
+    $('progress').attr('max', total)
+
+  ptmFile = new BinaryFile(url, progressHandler)
   ptmFile.load ->
     ptm = new PTM(new DataViewStream(ptmFile.dataStream))
     #### Parse and draw the scene

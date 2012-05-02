@@ -3,7 +3,7 @@
 
 class BinaryFile
 
-  constructor: (@url) ->
+  constructor: (@url, @progressHandler) ->
     @xhr = new XMLHttpRequest()
     @xhr.open('GET', @url, true)
     @xhr.responseType = 'arraybuffer'
@@ -12,6 +12,7 @@ class BinaryFile
 
   onProgress: (e) =>
     if e.lengthComputable
+      @progressHandler("Loading", e.loaded, e.total)
       console.log "#{e.loaded} of #{e.total}"
 
   onLoaded: =>

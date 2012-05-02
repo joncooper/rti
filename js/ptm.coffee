@@ -89,6 +89,8 @@ class PTM
         @tex1[offset]   = finalize(3)
         @tex1[offset+1] = finalize(4)
         @tex1[offset+2] = finalize(5)
+
+        # debug logging
         if ((y % 100) is 0) and (x is 500)
           console.log @tex0[offset], @tex0[offset+1], @tex0[offset+2]
           console.log @tex1[offset], @tex1[offset+1], @tex1[offset+2]
