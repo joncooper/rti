@@ -213,6 +213,7 @@ drawScene = (ptm) ->
 
   # Mouse move handler - relight based upon mouse position
   moveHandler = (event) =>
+    return
     return if @dragging
     [x, y] = canvasPointToLightSpacePoint(event.offsetX, event.offsetY)
 
@@ -292,6 +293,16 @@ drawChrominanceData = (ptm) ->
       pixelData.data[i+3] = 255
   context.putImageData(pixelData, 0, 0)
 
+#### dat.GUI stuff
+
+setupGUIControls = ->
+  @gui = new dat.GUI
+  @gui.add(@material.uniforms.drawNormalsMode, 'value', [0, 1]).name('drawNormals')
+  @gui.add(@material.uniforms.diffuseGain, 'value', 0.0,  20.0).name('diffuseGain')
+  @gui.add(@material.uniforms.Lu, 'value', -1.0, 1.0).name('Lu')
+  @gui.add(@material.uniforms.Lv, 'value', -1.0, 1.0).name('Lv')
+  window.gui = @gui
+
 #### Entry point
 
 loadAndDisplay = (url) ->
@@ -309,10 +320,11 @@ loadAndDisplay = (url) ->
     ptm.parse ->
       $('#three').removeClass('loading')
       drawScene(ptm)
+      setupGUIControls()
 
 $ ->
   $('.rti-file-list a').click (e) ->
     e.preventDefault()
     loadAndDisplay($(e.target).attr('href'))
 
-  loadAndDisplay('rti/WLR-tbird-no-distortion_1000.ptm')
+  loadAndDisplay('rti/Ban-Papyrus_1000.ptm')

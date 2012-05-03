@@ -7,6 +7,7 @@
       body {
         background: url(assets/little_pluses.png)
       }
+      .navbar
       .navbar-fixed-bottom {
         position: fixed;
         bottom: 0px;
@@ -18,6 +19,9 @@
       .navbar-fixed-bottom .navbar-inner .container a {
         float: none;
         text-align: center;
+      }
+      .dg.a {
+        margin-top: 50px;
       }
       #three {
         min-height: 400px;
@@ -58,15 +62,6 @@
       <div class="navbar-inner">
         <div class="container">
           <a class="brand" href="#">GLSL RTI Viewer</a>
-          <div class="nav-collapse">
-<!--
-            <ul class="nav">
-              <li><a href="#about">About</a></li>
-              <li><a href="#source">Source</a></li>
-              <li><a href="#contact">Contact</a></li>
-            </ul>
--->
-          </div><!--/.nav-collapse -->
         <ul class="nav">
 <li class="dropdown">
 <a href="#" class="dropdown-toggle" data-toggle="dropdown">Files<b class="caret"></b></a>
@@ -85,13 +80,16 @@
 <li><a href="rti/C_063.ptm" data-filetype="ptm">C_063</a></li>
 <li><a href="rti/C_069.ptm" data-filetype="ptm">C_069</a></li>
 <li><a href="rti/C_072.ptm" data-filetype="ptm">C_072</a></li>
-<li><a href="rti/tablet1.ptm" data-filetype="ptm">tablet1</a></li>
-<li><a href="rti/ushabti.ptm" data-filetype="ptm">ushabti</a></li>
 <li><a href="rti/WLR-tbird-no-distortion_1000.ptm" data-filetype="ptm">WLR-tbird-no-distortion_1000</a></li>
 </ul>
 </li>
 </ul>
 
+          <ul class="nav">
+            <li>
+              <a href="">Loading: <progress></progress></a>
+            </li>
+          </ul>
           <ul class="nav pull-right">
             <li>
               <a href="http://www.hpl.hp.com/research/ptm/papers/ptm.pdf">The Paper</a>

@@ -20,6 +20,9 @@
         float: none;
         text-align: center;
       }
+      .dg.a {
+        margin-top: 50px;
+      }
       #three {
         min-height: 400px;
         margin-top: 84px;

@@ -1,4 +1,5 @@
 #import "extern/Three.js"
+#import "extern/dat.gui.min.js"
 #import "math.coffee"
 #import "binaryfile.coffee"
 #import "dataviewstream.coffee"
